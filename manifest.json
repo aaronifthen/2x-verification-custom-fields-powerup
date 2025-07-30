@@ -3,16 +3,11 @@
   "details": "Adds custom fields for buffers, buffer approach, buffer definition, zones, and zone definition",
   "author": "Your Company",
   "capabilities": [
-    "card-detail-badges",
-    "show-settings"
+    "card-detail-badges"
   ],
   "connectors": {
     "iframe": {
-      "url": "https://aaronifthen.github.io/2x-verification-custom-fields-powerup/index.html"
+      "url": "https://aaronifthen.github.io/2x-verification-custom-fields-powerup/"
     }
-  },
-  "icon": {
-    "dark": "https://aaronifthen.github.io/2x-verification-custom-fields-powerup/images/icon-dark.svg",
-    "light": "https://aaronifthen.github.io/2x-verification-custom-fields-powerup/images/icon-light.svg"
   }
 }
