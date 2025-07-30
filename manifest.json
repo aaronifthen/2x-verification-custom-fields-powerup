@@ -3,7 +3,7 @@
   "details": "Adds custom fields for buffers, buffer approach, buffer definition, zones, and zone definition",
   "author": "Your Company",
   "capabilities": [
-    "card-detail-badges"
+    "card-detail-badges","attachment-sections"
   ],
   "connectors": {
     "iframe": {
