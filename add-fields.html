@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Add Custom Fields</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="content">
+        <h3>Add Custom Fields</h3>
+        <p>Select which fields you want to add to this card:</p>
+        
+        <div class="field-options">
+            <label class="field-option">
+                <input type="checkbox" id="buffers-check" value="buffers">
+                <span>Buffers (Text Area)</span>
+            </label>
+            
+            <label class="field-option">
+                <input type="checkbox" id="buffer-approach-check" value="buffer-approach">
+                <span>Buffer Approach (Dropdown)</span>
+            </label>
+            
+            <label class="field-option">
+                <input type="checkbox" id="buffer-definition-check" value="buffer-definition">
+                <span>Buffer Definition (Text Area)</span>
+            </label>
+            
+            <label class="field-option">
+                <input type="checkbox" id="zones-check" value="zones">
+                <span>Zones (Text Area)</span>
+            </label>
+            
+            <label class="field-option">
+                <input type="checkbox" id="zone-definition-check" value="zone-definition">
+                <span>Zone Definition (Text Area)</span>
+            </label>
+        </div>
+        
+        <div class="buttons">
+            <button id="add-btn" class="primary">Add Selected Fields</button>
+            <button id="cancel-btn">Cancel</button>
+        </div>
+    </div>
+    
+    <script src="https://p.trellocdn.com/power-up.min.js"></script>
+    <script>
+        const t = TrelloPowerUp.iframe();
+        
+        t.render(function() {
+            // Check which fields already exist
+            return Promise.all([
+                t.get('card', 'shared', 'buffers', ''),
+                t.get('card', 'shared', 'buffer-approach', ''),
+                t.get('card', 'shared', 'buffer-definition', ''),
+                t.get('card', 'shared', 'zones', ''),
+                t.get('card', 'shared', 'zone-definition', '')
+            ]).then(function(values) {
+                const fieldNames = ['buffers', 'buffer-approach', 'buffer-definition', 'zones', 'zone-definition'];
+                
+                // Disable checkboxes for fields that already exist
+                fieldNames.forEach((fieldName, index) => {
+                    const checkbox = document.getElementById(fieldName + '-check');
+                    if (values[index]) {
+                        checkbox.checked = true;
+                        checkbox.disabled = true;
+                        checkbox.parentElement.style.opacity = '0.5';
+                        checkbox.parentElement.title = 'Field already exists';
+                    }
+                });
+                
+                console.log('[Custom Fields] Add fields dialog initialized');
+            });
+        });
+        
+        document.getElementById('add-btn').addEventListener('click', function() {
+            const checkboxes = document.querySelectorAll('input[type="checkbox"]:checked:not(:disabled)');
+            const promises = [];
+            
+            checkboxes.forEach(function(checkbox) {
+                const fieldName = checkbox.value;
+                let defaultValue = '';
+                
+                // Set appropriate default values
+                if (fieldName === 'buffer-approach') {
+                    defaultValue = 'Conservative'; // Default dropdown selection
+                }
+                
+                console.log('[Custom Fields] Adding field:', fieldName, 'Default value:', defaultValue);
+                promises.push(t.set('card', 'shared', fieldName, defaultValue));
+            });
+            
+            if (promises.length > 0) {
+                Promise.all(promises).then(function() {
+                    console.log('[Custom Fields] All selected fields added successfully');
+                    t.closePopup();
+                }).catch(function(error) {
+                    console.error('[Custom Fields] Error adding fields:', error);
+                    alert('Error adding fields. Please try again.');
+                });
+            } else {
+                console.log('[Custom Fields] No new fields selected');
+                t.closePopup();
+            }
+        });
+        
+        document.getElementById('cancel-btn').addEventListener('click', function() {
+            console.log('[Custom Fields] Add fields cancelled');
+            t.closePopup();
+        });
+    </script>
+</body>
+</html>
