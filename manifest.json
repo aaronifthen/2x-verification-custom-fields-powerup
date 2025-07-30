@@ -8,11 +8,11 @@
   ],
   "connectors": {
     "iframe": {
-      "url": "./index.html"
+      "url": "https://aaronifthen.github.io/your-repo-name/index.html"
     }
   },
   "icon": {
-    "dark": "./images/icon-dark.svg",
-    "light": "./images/icon-light.svg"
+    "dark": "https://aaronifthen.github.io/your-repo-name/images/icon-dark.svg",
+    "light": "https://aaronifthen.github.io/your-repo-name/images/icon-light.svg"
   }
 }
