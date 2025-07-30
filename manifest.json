@@ -1,0 +1,18 @@
+{
+  "name": "Custom Fields Power-Up",
+  "details": "Adds custom fields for buffers, buffer approach, buffer definition, zones, and zone definition",
+  "author": "Your Company",
+  "capabilities": [
+    "card-detail-badges",
+    "show-settings"
+  ],
+  "connectors": {
+    "iframe": {
+      "url": "./index.html"
+    }
+  },
+  "icon": {
+    "dark": "./images/icon-dark.svg",
+    "light": "./images/icon-light.svg"
+  }
+}
