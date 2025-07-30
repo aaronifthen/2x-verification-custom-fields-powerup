@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Manage Custom Fields</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="content">
+        <h3>Custom Fields Manager</h3>
+        <p>Manage your existing custom fields for this card:</p>
+        
+        <div id="fields-list">
+            <!-- Fields will be dynamically loaded -->
+        </div>
+        
+        <div class="buttons">
+            <button id="refresh-btn">Refresh</button>
+            <button id="close-btn">Close</button>
+        </div>
+    </div>
+    
+    <script src="https://p.trellocdn.com/power-up.min.js"></script>
+    <script>
+        const t = TrelloPowerUp.iframe();
+        
+        // Field name mappings - should match the ones in client.js
+        const FIELD_MAPPINGS = {
+          'buffers': 'buffers',
+          'buffer-approach': 'buffer-approach', 
+          'buffer-definition': 'buffer-definition',
+          'zones': 'zones',
+          'zone-definition': 'zone-definition'
+        };
+        
+        function loadFields() {
+            console.log('[Custom Fields] Loading fields for management');
+            
+            return Promise.all([
+                t.card('customFieldItems'),
+                t.board('customFields')
+            ]).then(function(results) {
+                const card = results[0];
+                const board = results[1];
+                const fieldsList = document.getElementById('fields-list');
+                
+                const customFields = board.customFields || [];
+                const customFieldItems = card.customFieldItems || [];
+                
+                console.log('[Custom Fields] Found custom fields:', customFields.length);
+                
+                // Create field values map
+                const fieldValues = {};
+                customFieldItems.forEach(function(item) {
+                    if (item.value) {
+                        fieldValues[item.idCustomField] = item.value;
+                    }
+                });
+                
+                let fieldsHtml = '';
+                let foundTargetFields = 0;
+                
+                // Show all custom fields on the board
+                customFields.forEach(function(field) {
+                    const hasValue = !!fieldValues[field.id];
+                    const isTargetField = Object.values(FIELD_MAPPINGS).some(mappedName => 
+                        field.name.toLowerCase() === mappedName.toLowerCase()
+                    );
+                    
+                    if (isTargetField) {
+                        foundTargetFields++;
+                    }
+                    
+                    let displayValue = 'Not set';
+                    let valueClass = 'no-value';
+                    
+                    if (hasValue) {
+                        const value = fieldValues[field.id];
+                        valueClass = 'has-value';
+                        
+                        if (field.type === 'text' && value.text) {
+                            displayValue = value.text.length > 50 ? value.text.substring(0, 50) + '...' : value.text;
+                        } else if (field.type === 'list' && value.option) {
+                            displayValue = value.option.value.text;
+                        } else if (field.type === 'number' && value.number !== undefined) {
+                            displayValue = value.number.toString();
+                        } else if (field.type === 'date' && value.date) {
+                            displayValue = new Date(value.date).toLocaleDateString();
+                        } else if (field.type === 'checkbox') {
+                            displayValue = value.checked ? '✓ Checked' : '✗ Unchecked';
+                        }
+                    }
+                    
+                    const targetBadge = isTargetField ? '<span class="target-badge">Target Field</span>' : '';
+                    
+                    fieldsHtml += `
+                        <div class="field-item ${valueClass}">
+                            <div class="field-header">
+                                <div class="field-name">
+                                    <strong>${field.name}</strong>
+                                    <span class="field-type">(${field.type})</span>
+                                    ${targetBadge}
+                                </div>
+                                <button class="edit-field-btn" data-field-id="${field.id}" data-field-name="${field.name}" data-field-type="${field.type}">
+                                    ${hasValue ? 'Edit' : 'Set Value'}
+                                </button>
+                            </div>
+                            <div class="field-value">${displayValue}</div>
+                        </div>
+                    `;
+                });
+                
+                if (customFields.length === 0) {
+                    fieldsHtml = `
+                        <div class="message">
+                            <p>No custom fields found on this board.</p>
+                            <p>You need to add custom fields to the board first using Trello's Custom Fields Power-Up.</p>
+                        </div>
+                    `;
+                } else {
+                    // Add summary
+                    fieldsHtml = `
+                        <div class="fields-summary">
+                            <p><strong>Board Custom Fields:</strong> ${customFields.length} total, ${foundTargetFields} target fields found</p>
+                        </div>
+                    ` + fieldsHtml;
+                }
+                
+                fieldsList.innerHTML = fieldsHtml;
+                
+                // Add event listeners to edit buttons
+                document.querySelectorAll('.edit-field-btn').forEach(function(btn) {
+                    btn.addEventListener('click', function() {
+                        const fieldId = this.getAttribute('data-field-id');
+                        const fieldName = this.getAttribute('data-field-name');
+                        const fieldType = this.getAttribute('data-field-type');
+                        
+                        console.log('[Custom Fields] Opening editor for field:', fieldName);
+                        
+                        t.popup({
+                            title: 'Edit ' + fieldName,
+                            url: './edit-existing-field.html?fieldId=' + fieldId + '&fieldName=' + encodeURIComponent(fieldName) + '&fieldType=' + fieldType,
+                            height: fieldType === 'text' ? 300 : 200
+                        });
+                    });
+                });
+                
+            }).catch(function(error) {
+                console.error('[Custom Fields] Error loading fields:', error);
+                document.getElementById('fields-list').innerHTML = `
+                    <div class="message error">
+                        Error loading fields: ${error.message}
+                    </div>
+                `;
+            });
+        }
+        
+        t.render(function() {
+            loadFields();
+        });
+        
+        document.getElementById('refresh-btn').addEventListener('click', function() {
+            console.log('[Custom Fields] Refreshing fields list');
+            loadFields();
+        });
+        
+        document.getElementById('close-btn').addEventListener('click', function() {
+            console.log('[Custom Fields] Closing field manager');
+            t.closePopup();
+        });
+    </script>
+</body>
+</html>
