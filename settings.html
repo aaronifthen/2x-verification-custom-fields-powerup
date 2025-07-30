@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Custom Fields Settings</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="content">
+        <h3>Custom Fields Power-Up Settings</h3>
+        
+        <div class="settings-section">
+            <h4>About This Power-Up</h4>
+            <p>This Power-Up adds five custom fields to your Trello cards:</p>
+            <ul>
+                <li><strong>Buffers</strong> - Text area for buffer information</li>
+                <li><strong>Buffer Approach</strong> - Dropdown for approach selection</li>
+                <li><strong>Buffer Definition</strong> - Text area for buffer definitions</li>
+                <li><strong>Zones</strong> - Text area for zone information</li>
+                <li><strong>Zone Definition</strong> - Text area for zone definitions</li>
+            </ul>
+        </div>
+        
+        <div class="settings-section">
+            <h4>Field Management</h4>
+            <p>To add fields to a card, click on the card to open it and look for the custom field badges. If no fields exist, you'll see an "Add Fields" button.</p>
+            <p>Each field can be edited, saved, or deleted individually.</p>
+        </div>
+        
+        <div class="settings-section">
+            <h4>Logging & Observability</h4>
+            <p>This Power-Up includes comprehensive logging for troubleshooting. Check your browser's developer console for detailed operation logs.</p>
+            <label class="setting-option">
+                <input type="checkbox" id="enable-debug" checked>
+                <span>Enable debug logging</span>
+            </label>
+        </div>
+        
+        <div class="buttons">
+            <button id="save-settings-btn" class="primary">Save Settings</button>
+            <button id="close-btn">Close</button>
+        </div>
+    </div>
+    
+    <script src="https://p.trellocdn.com/power-up.min.js"></script>
+    <script>
+        const t = TrelloPowerUp.iframe();
+        
+        t.render(function() {
+            // Load current settings
+            return t.get('board', 'shared', 'debug-enabled', true).then(function(debugEnabled) {
+                document.getElementById('enable-debug').checked = debugEnabled;
+                console.log('[Custom Fields] Settings loaded - Debug enabled:', debugEnabled);
+            });
+        });
+        
+        document.getElementById('save-settings-btn').addEventListener('click', function() {
+            const debugEnabled = document.getElementById('enable-debug').checked;
+            
+            console.log('[Custom Fields] Saving settings - Debug enabled:', debugEnabled);
+            
+            t.set('board', 'shared', 'debug-enabled', debugEnabled).then(function() {
+                console.log('[Custom Fields] Settings saved successfully');
+                // Show confirmation
+                const btn = document.getElementById('save-settings-btn');
+                const originalText = btn.textContent;
+                btn.textContent = 'Saved!';
+                btn.style.background = '#5aac44';
+                
+                setTimeout(function() {
+                    btn.textContent = originalText;
+                    btn.style.background = '';
+                }, 2000);
+            }).catch(function(error) {
+                console.error('[Custom Fields] Error saving settings:', error);
+                alert('Error saving settings. Please try again.');
+            });
+        });
+        
+        document.getElementById('close-btn').addEventListener('click', function() {
+            console.log('[Custom Fields] Settings closed');
+            t.closePopup();
+        });
+    </script>
+</body>
+</html>
