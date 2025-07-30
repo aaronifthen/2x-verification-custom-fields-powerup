@@ -1,109 +1,108 @@
 /* global TrelloPowerUp */
 
+// Field name mappings - update these to match your existing Trello custom field names
+const FIELD_MAPPINGS = {
+  'buffers': 'buffers',           // Change to match your existing field name
+  'buffer-approach': 'buffer-approach',
+  'buffer-definition': 'buffer-definition', 
+  'zones': 'zones',
+  'zone-definition': 'zone-definition'
+};
+
 // Initialize the Power-Up
 TrelloPowerUp.initialize({
-  // Define custom field types
+  // Enhanced badges that work with existing custom fields
   'card-detail-badges': function(t, options) {
-    return Promise.all([
-      t.get('card', 'shared', 'buffers', ''),
-      t.get('card', 'shared', 'buffer-approach', ''),
-      t.get('card', 'shared', 'buffer-definition', ''),
-      t.get('card', 'shared', 'zones', ''),
-      t.get('card', 'shared', 'zone-definition', '')
-    ]).then(function(values) {
-      const badges = [];
-      
-      // Buffers field
-      if (values[0]) {
-        badges.push({
-          title: 'Buffers',
-          text: values[0].length > 30 ? values[0].substring(0, 30) + '...' : values[0],
-          callback: function(t) {
-            return t.popup({
-              title: 'Edit Buffers',
-              url: './edit-field.html?field=buffers&type=textarea',
-              height: 300
-            });
+    console.log('[Custom Fields] Loading card badges');
+    
+    return t.card('customFieldItems').then(function(card) {
+      return t.board('customFields').then(function(board) {
+        const badges = [];
+        const customFields = board.customFields || [];
+        const customFieldItems = card.customFieldItems || [];
+        
+        console.log('[Custom Fields] Found custom fields:', customFields.length);
+        console.log('[Custom Fields] Found field items:', customFieldItems.length);
+        
+        // Create a map of field definitions
+        const fieldDefinitions = {};
+        customFields.forEach(function(field) {
+          fieldDefinitions[field.id] = field;
+        });
+        
+        // Create a map of field values
+        const fieldValues = {};
+        customFieldItems.forEach(function(item) {
+          if (item.value) {
+            fieldValues[item.idCustomField] = item.value;
           }
         });
-      }
-      
-      // Buffer Approach field
-      if (values[1]) {
-        badges.push({
-          title: 'Buffer Approach',
-          text: values[1],
-          callback: function(t) {
-            return t.popup({
-              title: 'Edit Buffer Approach',
-              url: './edit-field.html?field=buffer-approach&type=dropdown',
-              height: 200
-            });
+        
+        // Process each of our target fields
+        Object.keys(FIELD_MAPPINGS).forEach(function(internalName) {
+          const mappedName = FIELD_MAPPINGS[internalName];
+          
+          // Find the field definition by name
+          const fieldDef = customFields.find(function(field) {
+            return field.name.toLowerCase() === mappedName.toLowerCase();
+          });
+          
+          if (fieldDef && fieldValues[fieldDef.id]) {
+            const value = fieldValues[fieldDef.id];
+            let displayValue = '';
+            
+            // Handle different field types
+            if (fieldDef.type === 'list' && value.option) {
+              displayValue = value.option.value.text;
+            } else if (fieldDef.type === 'text' && value.text) {
+              displayValue = value.text.length > 30 ? value.text.substring(0, 30) + '...' : value.text;
+            } else if (fieldDef.type === 'number' && value.number !== undefined) {
+              displayValue = value.number.toString();
+            } else if (fieldDef.type === 'date' && value.date) {
+              displayValue = new Date(value.date).toLocaleDateString();
+            } else if (fieldDef.type === 'checkbox') {
+              displayValue = value.checked ? '✓' : '✗';
+            }
+            
+            if (displayValue) {
+              badges.push({
+                title: fieldDef.name,
+                text: displayValue,
+                callback: function(t) {
+                  return t.popup({
+                    title: 'Edit ' + fieldDef.name,
+                    url: './edit-existing-field.html?fieldId=' + fieldDef.id + '&fieldName=' + encodeURIComponent(fieldDef.name) + '&fieldType=' + fieldDef.type,
+                    height: fieldDef.type === 'text' ? 300 : 200
+                  });
+                }
+              });
+            }
           }
         });
-      }
-      
-      // Buffer Definition field
-      if (values[2]) {
+        
+        // Add management button
         badges.push({
-          title: 'Buffer Definition',
-          text: values[2].length > 30 ? values[2].substring(0, 30) + '...' : values[2],
+          title: 'Field Manager',
+          text: 'Manage Fields',
           callback: function(t) {
             return t.popup({
-              title: 'Edit Buffer Definition',
-              url: './edit-field.html?field=buffer-definition&type=textarea',
-              height: 300
-            });
-          }
-        });
-      }
-      
-      // Zones field
-      if (values[3]) {
-        badges.push({
-          title: 'Zones',
-          text: values[3].length > 30 ? values[3].substring(0, 30) + '...' : values[3],
-          callback: function(t) {
-            return t.popup({
-              title: 'Edit Zones',
-              url: './edit-field.html?field=zones&type=textarea',
-              height: 300
-            });
-          }
-        });
-      }
-      
-      // Zone Definition field
-      if (values[4]) {
-        badges.push({
-          title: 'Zone Definition',
-          text: values[4].length > 30 ? values[4].substring(0, 30) + '...' : values[4],
-          callback: function(t) {
-            return t.popup({
-              title: 'Edit Zone Definition',
-              url: './edit-field.html?field=zone-definition&type=textarea',
-              height: 300
-            });
-          }
-        });
-      }
-      
-      // Add button to add new fields if none exist
-      if (badges.length === 0) {
-        badges.push({
-          title: 'Custom Fields',
-          text: 'Add Fields',
-          callback: function(t) {
-            return t.popup({
-              title: 'Add Custom Fields',
-              url: './add-fields.html',
+              title: 'Manage Custom Fields',
+              url: './manage-existing-fields.html',
               height: 400
             });
           }
         });
-      }
-      
-      return badges;
+        
+        console.log('[Custom Fields] Generated badges:', badges.length);
+        return badges;
+      });
+    }).catch(function(error) {
+      console.error('[Custom Fields] Error loading badges:', error);
+      return [{
+        title: 'Error',
+        text: 'Failed to load fields',
+        color: 'red'
+      }];
     });
   },
   
