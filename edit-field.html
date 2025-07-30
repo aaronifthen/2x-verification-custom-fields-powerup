@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Edit Field</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="content">
+        <div id="field-editor">
+            <!-- Field content will be dynamically generated -->
+        </div>
+        <div class="buttons">
+            <button id="save-btn" class="primary">Save</button>
+            <button id="cancel-btn">Cancel</button>
+            <button id="delete-btn" class="danger">Delete</button>
+        </div>
+    </div>
+    
+    <script src="https://p.trellocdn.com/power-up.min.js"></script>
+    <script>
+        // Get URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const fieldName = urlParams.get('field');
+        const fieldType = urlParams.get('type');
+        
+        const t = TrelloPowerUp.iframe();
+        
+        // Buffer approach dropdown options
+        const bufferApproachOptions = [
+            'Conservative',
+            'Moderate',
+            'Aggressive',
+            'Dynamic',
+            'Risk-Averse',
+            'Opportunity-Focused',
+            'Time-Based',
+            'Resource-Based',
+            'Market-Driven',
+            'Customer-Centric'
+        ];
+        
+        // Initialize the field editor
+        t.render(function() {
+            return t.get('card', 'shared', fieldName, '').then(function(currentValue) {
+                const editor = document.getElementById('field-editor');
+                
+                if (fieldType === 'textarea') {
+                    editor.innerHTML = `
+                        <label for="field-input">${getFieldLabel(fieldName)}:</label>
+                        <textarea id="field-input" rows="8" placeholder="Enter ${getFieldLabel(fieldName).toLowerCase()}...">${currentValue}</textarea>
+                    `;
+                } else if (fieldType === 'dropdown' && fieldName === 'buffer-approach') {
+                    let optionsHtml = '<option value="">Select approach...</option>';
+                    bufferApproachOptions.forEach(option => {
+                        const selected = option === currentValue ? 'selected' : '';
+                        optionsHtml += `<option value="${option}" ${selected}>${option}</option>`;
+                    });
+                    
+                    editor.innerHTML = `
+                        <label for="field-input">${getFieldLabel(fieldName)}:</label>
+                        <select id="field-input">${optionsHtml}</select>
+                    `;
+                }
+                
+                // Event listeners
+                document.getElementById('save-btn').addEventListener('click', saveField);
+                document.getElementById('cancel-btn').addEventListener('click', cancelEdit);
+                document.getElementById('delete-btn').addEventListener('click', deleteField);
+                
+                console.log('[Custom Fields] Field editor initialized for:', fieldName, 'Type:', fieldType);
+            });
+        });
+        
+        function getFieldLabel(fieldName) {
+            const labels = {
+                'buffers': 'Buffers',
+                'buffer-approach': 'Buffer Approach',
+                'buffer-definition': 'Buffer Definition',
+                'zones': 'Zones',
+                'zone-definition': 'Zone Definition'
+            };
+            return labels[fieldName] || fieldName;
+        }
+        
+        function saveField() {
+            const value = document.getElementById('field-input').value;
+            console.log('[Custom Fields] Saving field:', fieldName, 'Value:', value);
+            
+            t.set('card', 'shared', fieldName, value).then(function() {
+                console.log('[Custom Fields] Field saved successfully');
+                t.closePopup();
+            }).catch(function(error) {
+                console.error('[Custom Fields] Error saving field:', error);
+                alert('Error saving field. Please try again.');
+            });
+        }
+        
+        function cancelEdit() {
+            console.log('[Custom Fields] Edit cancelled');
+            t.closePopup();
+        }
+        
+        function deleteField() {
+            if (confirm('Are you sure you want to delete this field?')) {
+                console.log('[Custom Fields] Deleting field:', fieldName);
+                t.remove('card', 'shared', fieldName).then(function() {
+                    console.log('[Custom Fields] Field deleted successfully');
+                    t.closePopup();
+                }).catch(function(error) {
+                    console.error('[Custom Fields] Error deleting field:', error);
+                    alert('Error deleting field. Please try again.');
+                });
+            }
+        }
+    </script>
+</body>
+</html>
