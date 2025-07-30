@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Debug Info</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="content">
+        <h3>Debug Information</h3>
+        <div id="debug-info">
+            <p>Loading debug information...</p>
+        </div>
+        <div class="buttons">
+            <button id="refresh-btn" class="primary">Refresh</button>
+            <button id="close-btn">Close</button>
+        </div>
+    </div>
+    
+    <script src="https://p.trellocdn.com/power-up.min.js"></script>
+    <script>
+        const t = TrelloPowerUp.iframe();
+        
+        function loadDebugInfo() {
+            console.log('[Debug] Loading debug information');
+            
+            return Promise.all([
+                t.card('customFieldItems'),
+                t.board('customFields'),
+                t.card('all'),
+                t.board('all')
+            ]).then(function(results) {
+                const card = results[0];
+                const board = results[1];
+                const cardAll = results[2];
+                const boardAll = results[3];
+                
+                let debugHtml = `
+                    <div class="settings-section">
+                        <h4>Board Custom Fields (${board.customFields ? board.customFields.length : 0})</h4>
+                        <pre>${JSON.stringify(board.customFields, null, 2)}</pre>
+                    </div>
+                    
+                    <div class="settings-section">
+                        <h4>Card Custom Field Items (${card.customFieldItems ? card.customFieldItems.length : 0})</h4>
+                        <pre>${JSON.stringify(card.customFieldItems, null, 2)}</pre>
+                    </div>
+                    
+                    <div class="settings-section">
+                        <h4>Card Info</h4>
+                        <p><strong>Card ID:</strong> ${cardAll.id}</p>
+                        <p><strong>Card Name:</strong> ${cardAll.name}</p>
+                    </div>
+                    
+                    <div class="settings-section">
+                        <h4>Board Info</h4>
+                        <p><strong>Board ID:</strong> ${boardAll.id}</p>
+                        <p><strong>Board Name:</strong> ${boardAll.name}</p>
+                    </div>
+                    
+                    <div class="settings-section">
+                        <h4>Power-Up URL</h4>
+                        <p><strong>Current URL:</strong> ${window.location.href}</p>
+                        <p><strong>Origin:</strong> ${window.location.origin}</p>
+                    </div>
+                `;
+                
+                document.getElementById('debug-info').innerHTML = debugHtml;
+                
+            }).catch(function(error) {
+                console.error('[Debug] Error loading debug info:', error);
+                document.getElementById('debug-info').innerHTML = `
+                    <div class="message error">
+                        <h4>Error Loading Debug Info</h4>
+                        <p><strong>Error:</strong> ${error.message}</p>
+                        <p><strong>Stack:</strong></p>
+                        <pre>${error.stack}</pre>
+                    </div>
+                `;
+            });
+        }
+        
+        t.render(function() {
+            loadDebugInfo();
+        });
+        
+        document.getElementById('refresh-btn').addEventListener('click', function() {
+            console.log('[Debug] Refreshing debug info');
+            loadDebugInfo();
+        });
+        
+        document.getElementById('close-btn').addEventListener('click', function() {
+            console.log('[Debug] Closing debug dialog');
+            t.closePopup();
+        });
+    </script>
+</body>
+</html>
