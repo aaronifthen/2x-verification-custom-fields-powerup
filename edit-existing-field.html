@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Edit Field</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="content">
+        <div id="field-editor">
+            <!-- Field content will be dynamically generated -->
+        </div>
+        <div class="buttons">
+            <button id="save-btn" class="primary">Save</button>
+            <button id="cancel-btn">Cancel</button>
+            <button id="clear-btn" class="danger">Clear Field</button>
+        </div>
+    </div>
+    
+    <script src="https://p.trellocdn.com/power-up.min.js"></script>
+    <script>
+        // Get URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const fieldId = urlParams.get('fieldId');
+        const fieldName = urlParams.get('fieldName');
+        const fieldType = urlParams.get('fieldType');
+        
+        const t = TrelloPowerUp.iframe();
+        
+        let currentFieldItem = null;
+        let fieldDefinition = null;
+        
+        // Initialize the field editor
+        t.render(function() {
+            console.log('[Custom Fields] Initializing editor for field:', fieldName, 'Type:', fieldType);
+            
+            return Promise.all([
+                t.card('customFieldItems'),
+                t.board('customFields')
+            ]).then(function(results) {
+                const card = results[0];
+                const board = results[1];
+                
+                // Find the field definition
+                fieldDefinition = board.customFields.find(function(field) {
+                    return field.id === fieldId;
+                });
+                
+                if (!fieldDefinition) {
+                    throw new Error('Field definition not found');
+                }
+                
+                // Find current field value
+                currentFieldItem = card.customFieldItems.find(function(item) {
+                    return item.idCustomField === fieldId;
+                });
+                
+                const editor = document.getElementById('field-editor');
+                let currentValue = '';
+                
+                // Extract current value based on field type
+                if (currentFieldItem && currentFieldItem.value) {
+                    const value = currentFieldItem.value;
+                    if (fieldType === 'text' && value.text) {
+                        currentValue = value.text;
+                    } else if (fieldType === 'list' && value.option) {
+                        currentValue = value.option.id;
+                    } else if (fieldType === 'number' && value.number !== undefined) {
+                        currentValue = value.number.toString();
+                    } else if (fieldType === 'checkbox') {
+                        currentValue = value.checked ? 'true' : 'false';
+                    }
+                }
+                
+                // Generate appropriate input based on field type
+                if (fieldType === 'text') {
+                    editor.innerHTML = `
+                        <label for="field-input">${fieldName}:</label>
+                        <textarea id="field-input" rows="8" placeholder="Enter ${fieldName.toLowerCase()}...">${currentValue}</textarea>
+                    `;
+                } else if (fieldType === 'list') {
+                    let optionsHtml = '<option value="">Select option...</option>';
+                    fieldDefinition.options.forEach(function(option) {
+                        const selected = option.id === currentValue ? 'selected' : '';
+                        optionsHtml += `<option value="${option.id}" ${selected}>${option.value.text}</option>`;
+                    });
+                    
+                    editor.innerHTML = `
+                        <label for="field-input">${fieldName}:</label>
+                        <select id="field-input">${optionsHtml}</select>
+                    `;
+                } else if (fieldType === 'number') {
+                    editor.innerHTML = `
+                        <label for="field-input">${fieldName}:</label>
+                        <input type="number" id="field-input" placeholder="Enter number..." value="${currentValue}">
+                    `;
+                } else if (fieldType === 'checkbox') {
+                    const checked = currentValue === 'true' ? 'checked' : '';
+                    editor.innerHTML = `
+                        <label class="field-option">
+                            <input type="checkbox" id="field-input" ${checked}>
+                            <span>${fieldName}</span>
+                        </label>
+                    `;
+                }
+                
+                // Event listeners
+                document.getElementById('save-btn').addEventListener('click', saveField);
+                document.getElementById('cancel-btn').addEventListener('click', cancelEdit);
+                document.getElementById('clear-btn').addEventListener('click', clearField);
+                
+                console.log('[Custom Fields] Field editor initialized for existing field:', fieldName);
+            }).catch(function(error) {
+                console.error('[Custom Fields] Error initializing editor:', error);
+                document.getElementById('field-editor').innerHTML = `
+                    <div class="message error">
+                        Error loading field: ${error.message}
+                    </div>
+                `;
+            });
+        });
+        
+        function saveField() {
+            const input = document.getElementById('field-input');
+            let value = {};
+            
+            console.log('[Custom Fields] Saving field:', fieldName, 'Type:', fieldType);
+            
+            try {
+                // Prepare value based on field type
+                if (fieldType === 'text') {
+                    value = { text: input.value.trim() };
+                } else if (fieldType === 'list') {
+                    if (input.value) {
+                        const selectedOption = fieldDefinition.options.find(opt => opt.id === input.value);
+                        if (selectedOption) {
+                            value = { option: selectedOption };
+                        }
+                    }
+                } else if (fieldType === 'number') {
+                    const num = parseFloat(input.value);
+                    if (!isNaN(num)) {
+                        value = { number: num };
+                    }
+                } else if (fieldType === 'checkbox') {
+                    value = { checked: input.checked };
+                }
+                
+                // Update the custom field
+                t.card('customFieldItems', value, fieldId).then(function() {
+                    console.log('[Custom Fields] Field saved successfully:', fieldName);
+                    t.closePopup();
+                }).catch(function(error) {
+                    console.error('[Custom Fields] Error saving field:', error);
+                    alert('Error saving field: ' + error.message);
+                });
+                
+            } catch (error) {
+                console.error('[Custom Fields] Error preparing field value:', error);
+                alert('Error preparing field value: ' + error.message);
+            }
+        }
+        
+        function cancelEdit() {
+            console.log('[Custom Fields] Edit cancelled for field:', fieldName);
+            t.closePopup();
+        }
+        
+        function clearField() {
+            if (confirm('Are you sure you want to clear this field?')) {
+                console.log('[Custom Fields] Clearing field:', fieldName);
+                
+                // Clear the field by setting empty value
+                t.card('customFieldItems', {}, fieldId).then(function() {
+                    console.log('[Custom Fields] Field cleared successfully:', fieldName);
+                    t.closePopup();
+                }).catch(function(error) {
+                    console.error('[Custom Fields] Error clearing field:', error);
+                    alert('Error clearing field: ' + error.message);
+                });
+            }
+        }
+    </script>
+</body>
+</html>
