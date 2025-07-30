@@ -16,7 +16,9 @@ TrelloPowerUp.initialize({
     console.log('[Custom Fields] Loading card badges');
     
     return t.card('customFieldItems').then(function(card) {
+      console.log('[Custom Fields] Card data:', card);
       return t.board('customFields').then(function(board) {
+        console.log('[Custom Fields] Board data:', board);
         const badges = [];
         const customFields = board.customFields || [];
         const customFieldItems = card.customFieldItems || [];
@@ -28,6 +30,7 @@ TrelloPowerUp.initialize({
         const fieldDefinitions = {};
         customFields.forEach(function(field) {
           fieldDefinitions[field.id] = field;
+          console.log('[Custom Fields] Field definition:', field.name, field.type);
         });
         
         // Create a map of field values
@@ -35,6 +38,7 @@ TrelloPowerUp.initialize({
         customFieldItems.forEach(function(item) {
           if (item.value) {
             fieldValues[item.idCustomField] = item.value;
+            console.log('[Custom Fields] Field value:', item.idCustomField, item.value);
           }
         });
         
@@ -80,7 +84,7 @@ TrelloPowerUp.initialize({
           }
         });
         
-        // Add management button
+        // Add management button even if no values exist
         badges.push({
           title: 'Field Manager',
           text: 'Manage Fields',
@@ -101,7 +105,14 @@ TrelloPowerUp.initialize({
       return [{
         title: 'Error',
         text: 'Failed to load fields',
-        color: 'red'
+        color: 'red',
+        callback: function(t) {
+          return t.popup({
+            title: 'Debug Info',
+            url: './debug.html',
+            height: 300
+          });
+        }
       }];
     });
   },
@@ -113,6 +124,11 @@ TrelloPowerUp.initialize({
       height: 300
     });
   }
+});
+
+// Wait for DOM to be ready
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('[Custom Fields] DOM loaded');
 });
 
 // Logging utility
