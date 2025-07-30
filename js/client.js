@@ -11,8 +11,8 @@ const FIELD_MAPPINGS = {
   'zone-definition': 'zone-definition'
 };
 
-// Initialize the Power-Up
-TrelloPowerUp.initialize({
+// Debug: Log what we're about to initialize
+const capabilities = {
   'card-detail-badges': function(t, options) {
     console.log('[Custom Fields] card-detail-badges called');
     console.log('[Custom Fields] Context:', options);
@@ -26,9 +26,11 @@ TrelloPowerUp.initialize({
       }
     ]);
   }
-}, {
-  appKey: '55a5d916446f517774210006',
-  appName: 'Custom Fields Power-Up'
-});
+};
+
+console.log('[Custom Fields] Initializing with capabilities:', Object.keys(capabilities));
+
+// Initialize the Power-Up
+TrelloPowerUp.initialize(capabilities);
 
 console.log('[Custom Fields] Power-Up initialization complete');
