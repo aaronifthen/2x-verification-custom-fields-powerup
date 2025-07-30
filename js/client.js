@@ -30,7 +30,7 @@ const capabilities = {
 
 console.log('[Custom Fields] Initializing with capabilities:', Object.keys(capabilities));
 
-// Initialize the Power-Up
+// Initialize the Power-Up WITHOUT specifying an ID - let Trello assign one
 TrelloPowerUp.initialize(capabilities);
 
 console.log('[Custom Fields] Power-Up initialization complete');
