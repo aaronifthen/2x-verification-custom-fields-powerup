@@ -25,22 +25,11 @@ TrelloPowerUp.initialize({
         const customFields = board.customFields || [];
         const customFieldItems = card.customFieldItems || [];
         
-        // Log all custom fields for debugging
-        customFields.forEach(function(field, index) {
-          console.log(`[Custom Fields] Available field ${index}:`, field.name, field.type, field.id);
-        });
-        
-        // Log all field items for debugging
-        customFieldItems.forEach(function(item, index) {
-          console.log(`[Custom Fields] Field item ${index}:`, item.idCustomField, item.value);
-        });
-        
         // Create field values map
         const fieldValues = {};
         customFieldItems.forEach(function(item) {
           if (item.value) {
             fieldValues[item.idCustomField] = item.value;
-            console.log('[Custom Fields] Field value mapped:', item.idCustomField, item.value);
           }
         });
         
@@ -53,58 +42,44 @@ TrelloPowerUp.initialize({
             return field.name.toLowerCase() === mappedName.toLowerCase();
           });
           
-          if (fieldDef) {
-            console.log('[Custom Fields] Found target field:', fieldDef.name, 'ID:', fieldDef.id, 'Type:', fieldDef.type);
+          if (fieldDef && fieldValues[fieldDef.id]) {
+            const value = fieldValues[fieldDef.id];
+            let displayValue = '';
             
-            if (fieldValues[fieldDef.id]) {
-              const value = fieldValues[fieldDef.id];
-              let displayValue = '';
-              
-              console.log('[Custom Fields] Processing value for', fieldDef.name, ':', value);
-              
-              // Handle different field types
-              if (fieldDef.type === 'list' && value.option) {
-                displayValue = value.option.value.text;
-                console.log('[Custom Fields] Dropdown value found:', displayValue);
-              } else if (fieldDef.type === 'text' && value.text) {
-                displayValue = value.text.length > 30 ? value.text.substring(0, 30) + '...' : value.text;
-                console.log('[Custom Fields] Text value found:', displayValue);
-              } else if (fieldDef.type === 'number' && value.number !== undefined) {
-                displayValue = value.number.toString();
-                console.log('[Custom Fields] Number value found:', displayValue);
-              } else if (fieldDef.type === 'date' && value.date) {
-                displayValue = new Date(value.date).toLocaleDateString();
-                console.log('[Custom Fields] Date value found:', displayValue);
-              } else if (fieldDef.type === 'checkbox') {
-                displayValue = value.checked ? '✓ Yes' : '✗ No';
-                console.log('[Custom Fields] Checkbox value found:', displayValue);
-              }
-              
-              if (displayValue) {
-                badges.push({
-                  title: fieldDef.name,
-                  text: displayValue,
-                  color: fieldDef.type === 'list' ? 'blue' : 'green'
-                });
-                console.log('[Custom Fields] Badge created for:', fieldDef.name, displayValue);
-              }
-            } else {
-              console.log('[Custom Fields] No value found for field:', fieldDef.name);
+            // Handle different field types
+            if (fieldDef.type === 'list' && value.option) {
+              displayValue = value.option.value.text;
+            } else if (fieldDef.type === 'text' && value.text) {
+              displayValue = value.text.length > 30 ? value.text.substring(0, 30) + '...' : value.text;
+            } else if (fieldDef.type === 'number' && value.number !== undefined) {
+              displayValue = value.number.toString();
+            } else if (fieldDef.type === 'date' && value.date) {
+              displayValue = new Date(value.date).toLocaleDateString();
+            } else if (fieldDef.type === 'checkbox') {
+              displayValue = value.checked ? '✓ Yes' : '✗ No';
             }
-          } else {
-            console.log('[Custom Fields] Target field NOT found:', mappedName);
+            
+            if (displayValue) {
+              const badge = {
+                title: fieldDef.name,
+                text: displayValue,
+                color: fieldDef.type === 'list' ? 'blue' : 'green'
+              };
+              badges.push(badge);
+              console.log('[Custom Fields] BADGE CREATED:', badge.title, '=', badge.text);
+            }
           }
         });
         
-        // Always add informational badge
+        // Add summary badge
         badges.push({
-          title: 'Custom Fields',
-          text: `${badges.length} fields with values`,
+          title: 'Fields',
+          text: `${badges.length} active`,
           color: 'light-gray'
         });
         
-        console.log('[Custom Fields] Final badges count:', badges.length);
-        console.log('[Custom Fields] Badges:', badges.map(b => `${b.title}: ${b.text}`));
+        console.log('[Custom Fields] *** RETURNING', badges.length, 'BADGES ***');
+        console.log('[Custom Fields] Badge list:', badges.map(b => `${b.title}: ${b.text}`));
         
         return badges;
       });
@@ -119,7 +94,6 @@ TrelloPowerUp.initialize({
   },
   
   'show-settings': function(t, options) {
-    console.log('[Custom Fields] *** SHOW-SETTINGS CALLED ***');
     return t.popup({
       title: 'Custom Fields Info',
       url: './debug.html',
