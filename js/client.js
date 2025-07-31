@@ -80,7 +80,20 @@ TrelloPowerUp.initialize({
             valueSource = 'empty';
           }
           
-          // Create badge - with properly sized popup window
+          // Create badge with appropriate popup size based on field type
+          let popupWidth = 400; // Default width
+          let popupHeight = 250; // Default height
+          
+          if (field.type === 'text') {
+            // All TEXT fields get wide popup
+            popupWidth = 700;
+            popupHeight = 450;
+          } else if (field.type === 'list') {
+            // Dropdown fields get 50% wider
+            popupWidth = 600;
+            popupHeight = 300;
+          }
+          
           badges.push({
             title: field.name,
             text: displayValue, // Full text, no truncation
@@ -89,16 +102,16 @@ TrelloPowerUp.initialize({
               return t.popup({
                 title: 'Edit ' + field.name,
                 url: './edit-field-popup.html?fieldId=' + field.id + '&fieldName=' + encodeURIComponent(field.name) + '&fieldType=' + field.type,
-                height: field.type === 'text' ? 450 : 350,
-                width: 700  // Increased from 600 to 700 to properly contain 500px textarea + padding
+                height: popupHeight,
+                width: popupWidth
               });
             }
           });
           
-          console.log('[Custom Fields] Badge created:', field.name, '=', displayValue.substring(0, 50), `(${badgeColor}, ${valueSource})`);
+          console.log('[Custom Fields] Badge created:', field.name, '=', displayValue.substring(0, 50), `(${badgeColor}, ${valueSource}, ${popupWidth}x${popupHeight})`);
         });
         
-        console.log('[Custom Fields] *** RETURNING', badges.length, 'BADGES (wide popups, no scrollbars) ***');
+        console.log('[Custom Fields] *** RETURNING', badges.length, 'BADGES (custom sizes per field type) ***');
         return badges;
       });
       
