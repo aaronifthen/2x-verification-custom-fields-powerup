@@ -58,7 +58,7 @@ TrelloPowerUp.initialize({
           callback: function(t) {
             return t.popup({
               title: 'Edit ' + field.name,
-              url: './edit-powerup-field.html?fieldId=' + field.id + '&fieldName=' + encodeURIComponent(field.name) + '&fieldType=' + field.type + '&v=5',
+              url: './edit-v5-field.html?fieldId=' + field.id + '&fieldName=' + encodeURIComponent(field.name) + '&fieldType=' + field.type + '&v=5',
               height: popupHeight,
               width: popupWidth
             });
