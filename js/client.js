@@ -2,7 +2,7 @@
 
 console.log('[Custom Fields] Starting Power-Up initialization');
 
-// Initialize the Power-Up with clickable badges
+// Initialize the Power-Up with full editing capability
 TrelloPowerUp.initialize({
   'card-detail-badges': function(t, options) {
     console.log('[Custom Fields] *** BADGES FUNCTION CALLED ***');
@@ -14,87 +14,98 @@ TrelloPowerUp.initialize({
       const card = results[0];
       const board = results[1];
       
-      const badges = [];
+      if (!board.customFields || board.customFields.length === 0) {
+        return [{
+          title: 'No Custom Fields',
+          text: 'No custom fields found on this board',
+          color: 'red'
+        }];
+      }
       
-      console.log('[Custom Fields] Board custom fields:', board.customFields ? board.customFields.length : 0);
-      console.log('[Custom Fields] Card field items:', card.customFieldItems ? card.customFieldItems.length : 0);
+      // Get Power-Up stored values for all fields
+      const fieldPromises = board.customFields.map(function(field) {
+        return t.get('card', 'shared', 'customField-' + field.id, '').then(function(powerUpValue) {
+          return { field: field, powerUpValue: powerUpValue };
+        });
+      });
       
-      if (board.customFields) {
-        // Create field values map first
-        const fieldValues = {};
+      return Promise.all(fieldPromises).then(function(fieldData) {
+        const badges = [];
+        
+        // Create field values map from Trello
+        const trelloFieldValues = {};
         if (card.customFieldItems) {
           card.customFieldItems.forEach(function(item) {
             if (item.value) {
-              fieldValues[item.idCustomField] = item.value;
+              trelloFieldValues[item.idCustomField] = item.value;
             }
           });
         }
         
-        // Process ALL custom fields with click handlers
-        board.customFields.forEach(function(field) {
+        // Process each field
+        fieldData.forEach(function(data) {
+          const field = data.field;
+          const powerUpValue = data.powerUpValue;
+          
           let displayValue = '';
           let badgeColor = 'light-gray';
+          let valueSource = '';
           
-          if (fieldValues[field.id]) {
-            // Field has a value
-            const value = fieldValues[field.id];
-            badgeColor = 'green';
+          // Priority: Power-Up value first, then Trello value
+          if (powerUpValue) {
+            displayValue = powerUpValue;
+            badgeColor = field.type === 'list' ? 'blue' : 'green';
+            valueSource = 'powerup';
+          } else if (trelloFieldValues[field.id]) {
+            // Get Trello value
+            const trelloValue = trelloFieldValues[field.id];
             
-            if (field.type === 'list' && value.option) {
-              displayValue = value.option.value.text;
+            if (field.type === 'list' && trelloValue.option) {
+              displayValue = trelloValue.option.value.text;
               badgeColor = 'blue';
-            } else if (field.type === 'text' && value.text) {
-              displayValue = value.text.substring(0, 30) + (value.text.length > 30 ? '...' : '');
-            } else if (field.type === 'number' && value.number !== undefined) {
-              displayValue = value.number.toString();
+            } else if (field.type === 'text' && trelloValue.text) {
+              displayValue = trelloValue.text;
+              badgeColor = 'green';
+            } else if (field.type === 'number' && trelloValue.number !== undefined) {
+              displayValue = trelloValue.number.toString();
+              badgeColor = 'green';
             } else if (field.type === 'checkbox') {
-              displayValue = value.checked ? '✓ Yes' : '✗ No';
+              displayValue = trelloValue.checked ? '✓ Yes' : '✗ No';
+              badgeColor = 'green';
             }
+            valueSource = 'trello';
           } else {
-            // Field is empty
-            displayValue = '(click to edit)';
+            displayValue = '(click to add)';
             badgeColor = 'light-gray';
+            valueSource = 'empty';
           }
           
+          // Create badge - each field gets its own row
           badges.push({
             title: field.name,
-            text: displayValue,
+            text: displayValue, // Full text, no truncation
             color: badgeColor,
             callback: function(t) {
               return t.popup({
-                title: field.name + ' - Field Info',
-                url: './field-info.html?fieldId=' + field.id + '&fieldName=' + encodeURIComponent(field.name) + '&fieldType=' + field.type,
-                height: 250
+                title: 'Edit ' + field.name,
+                url: './edit-field-popup.html?fieldId=' + field.id + '&fieldName=' + encodeURIComponent(field.name) + '&fieldType=' + field.type,
+                height: field.type === 'text' ? 400 : 300
               });
             }
           });
           
-          console.log('[Custom Fields] Added clickable badge:', field.name, '=', displayValue, `(${badgeColor})`);
+          console.log('[Custom Fields] Badge created:', field.name, '=', displayValue.substring(0, 50), `(${badgeColor}, ${valueSource})`);
         });
-      }
-      
-      // Add info badge
-      badges.push({
-        title: 'Custom Fields',
-        text: 'Enhanced View',
-        color: 'green',
-        callback: function(t) {
-          return t.popup({
-            title: 'Custom Fields Power-Up',
-            url: './info.html',
-            height: 300
-          });
-        }
+        
+        console.log('[Custom Fields] *** RETURNING', badges.length, 'BADGES (full-width, editable) ***');
+        return badges;
       });
-      
-      console.log('[Custom Fields] *** RETURNING', badges.length, 'BADGES ***');
-      return badges;
       
     }).catch(function(error) {
       console.error('[Custom Fields] Error in badges function:', error);
       return [{
         title: 'Error',
-        text: 'Failed to load',
+        text: 'Failed to load fields: ' + error.message,
         color: 'red'
       }];
     });
