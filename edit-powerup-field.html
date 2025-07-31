@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Edit Field</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* Base styles for all field inputs */
+        #field-input {
+            width: 100%;
+            font-size: 14px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.4;
+            box-sizing: border-box;
+        }
+        
+        /* Text area styles - for wide popups (700px) */
+        textarea#field-input {
+            max-width: 580px;
+            min-height: 120px;
+            padding: 12px;
+            resize: vertical;
+        }
+        
+        /* Dropdown styles - for medium popups (600px) */
+        select#field-input {
+            max-width: 480px;
+            min-height: 45px;
+            padding: 8px 12px;
+        }
+        
+        /* Container sizing */
+        .popup-content {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 20px;
+        }
+        
+        .popup-content.text-field {
+            max-width: 650px;
+        }
+        
+        .popup-content.dropdown-field {
+            max-width: 550px;
+        }
+        
+        #content {
+            width: 100%;
+            box-sizing: border-box;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+        
+        .buttons {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+        
+        h3 {
+            margin-top: 0;
+            color: #172b4d;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #172b4d;
+        }
+    </style>
+</head>
+<body>
+    <div id="content" class="popup-content">
+        <div id="field-editor">
+            <p>Loading field editor...</p>
+        </div>
+        <div class="buttons">
+            <button id="save-btn" class="primary">Save</button>
+            <button id="delete-btn" class="danger">Delete</button>
+            <button id="cancel-btn">Cancel</button>
+        </div>
+    </div>
+    
+    <script src="https://p.trellocdn.com/power-up.min.js"></script>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const fieldId = urlParams.get('fieldId');
+        const fieldName = urlParams.get('fieldName');
+        const fieldType = urlParams.get('fieldType');
+        
+        const t = TrelloPowerUp.iframe();
+        
+        // Field definitions
+        const FIELD_DEFINITIONS = {
+          'buffer-approach': {
+            options: [
+              'property-center-to-property-center',
+              'parcel-to-parcel',
+              'natural-path', 
+              'other-approach',
+              'not-applicable'
+            ]
+          }
+        };
+        
+        t.render(function() {
+            console.log('[Edit PowerUp] Loading editor for:', fieldName, fieldType);
+            
+            // Set container class
+            const content = document.getElementById('content');
+            if (fieldType === 'text') {
+                content.className = 'popup-content text-field';
+            } else if (fieldType === 'list') {
+                content.className = 'popup-content dropdown-field';
+            }
+            
+            return t.get('card', 'shared', fieldId, '').then(function(currentValue) {
+                let editorHtml = `<h3>${fieldName}</h3>`;
+                
+                if (fieldType === 'text') {
+                    editorHtml += `
+                        <label for="field-input">${fieldName}:</label>
+                        <textarea id="field-input" rows="8" placeholder="Enter ${fieldName.toLowerCase()}...">${currentValue}</textarea>
+                    `;
+                } else if (fieldType === 'list') {
+                    const fieldDef = FIELD_DEFINITIONS[fieldId];
+                    if (fieldDef && fieldDef.options) {
+                        let optionsHtml = '<option value="">Select option...</option>';
+                        fieldDef.options.forEach(function(option) {
+                            const selected = option === currentValue ? 'selected' : '';
+                            optionsHtml += `<option value="${option}" ${selected}>${option}</option>`;
+                        });
+                        
+                        editorHtml += `
+                            <label for="field-input">${fieldName}:</label>
+                            <select id="field-input">${optionsHtml}</select>
+                        `;
+                    }
+                }
+                
+                document.getElementById('field-editor').innerHTML = editorHtml;
+                
+                // Event listeners
+                document.getElementById('save-btn').addEventListener('click', saveField);
+                document.getElementById('delete-btn').addEventListener('click', deleteField);
+                document.getElementById('cancel-btn').addEventListener('click', cancelEdit);
+                
+                // Focus the input
+                setTimeout(function() {
+                    const input = document.getElementById('field-input');
+                    if (input) {
+                        input.focus();
+                        if (input.tagName === 'TEXTAREA') {
+                            input.setSelectionRange(input.value.length, input.value.length);
+                        }
+                    }
+                }, 100);
+                
+            }).catch(function(error) {
+                console.error('[Edit PowerUp] Error:', error);
+                document.getElementById('field-editor').innerHTML = `
+                    <div class="message error">
+                        Error loading field: ${error.message}
+                    </div>
+                `;
+            });
+        });
+        
+        function saveField() {
+            const input = document.getElementById('field-input');
+            let value = '';
+            
+            if (fieldType === 'text') {
+                value = input.value.trim();
+            } else if (fieldType === 'list') {
+                value = input.value;
+            }
+            
+            console.log('[Edit PowerUp] Saving:', fieldName, '=', value);
+            
+            t.set('card', 'shared', fieldId, value).then(function() {
+                console.log('[Edit PowerUp] Saved successfully');
+                t.closePopup();
+            }).catch(function(error) {
+                console.error('[Edit PowerUp] Error saving:', error);
+                alert('Error saving: ' + error.message);
+            });
+        }
+        
+        function deleteField() {
+            if (confirm('Delete this field value?')) {
+                t.remove('card', 'shared', fieldId).then(function() {
+                    console.log('[Edit PowerUp] Field deleted');
+                    t.closePopup();
+                }).catch(function(error) {
+                    console.error('[Edit PowerUp] Error deleting:', error);
+                    alert('Error deleting: ' + error.message);
+                });
+            }
+        }
+        
+        function cancelEdit() {
+            t.closePopup();
+        }
+    </script>
+</body>
+</html>
