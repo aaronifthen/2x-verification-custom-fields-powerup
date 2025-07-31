@@ -14,10 +14,10 @@
             box-sizing: border-box;
         }
         
-        /* Text area styles - MUCH WIDER for text fields (1200px window) */
+        /* Text area styles - MUCH WIDER and SHORTER for text fields */
         textarea#field-input {
-            max-width: 1000px;  /* Much wider for text fields */
-            min-height: 180px;  /* Keep the taller height */
+            max-width: 1500px;  /* Increased by 50% from 1000px (1000 * 1.5 = 1500) */
+            min-height: 120px;  /* Reduced by 33% from 180px (180 * 0.67 = 120) */
             padding: 18px;      
             resize: vertical;
             font-size: 16px;    
@@ -40,7 +40,7 @@
         
         /* Text field container - MUCH WIDER */
         .popup-content.text-field {
-            max-width: 1100px;  /* Much wider container for text fields */
+            max-width: 1650px;  /* Increased to accommodate 1500px textarea + padding */
         }
         
         /* Dropdown container - REVERTED to original */
@@ -167,7 +167,7 @@
                 if (fieldType === 'text') {
                     editorHtml += `
                         <label for="field-input">${fieldName}:</label>
-                        <textarea id="field-input" rows="12" placeholder="Enter ${fieldName.toLowerCase()}...">${currentValue}</textarea>
+                        <textarea id="field-input" rows="8" placeholder="Enter ${fieldName.toLowerCase()}...">${currentValue}</textarea>
                     `;
                 } else if (fieldType === 'list') {
                     const fieldDef = FIELD_DEFINITIONS[fieldId];
