@@ -81,8 +81,8 @@ TrelloPowerUp.initialize({
           }
           
           // Create badge with appropriate popup size based on field type
-          let popupWidth = 400; // Default width
-          let popupHeight = 250; // Default height
+          let popupWidth = 700; // Default width
+          let popupHeight = 450; // Default height
           
           if (field.type === 'text') {
             // All TEXT fields get wide popup
