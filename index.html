@@ -4,14 +4,22 @@
     <meta charset="utf-8">
     <title>Custom Fields Power-Up</title>
     <link rel="stylesheet" href="style.css">
+    <script src="https://p.trellocdn.com/power-up.min.js"></script>
 </head>
 <body>
     <div id="content">
-        <h1>Custom Fields Power-Up</h1>
+        <h1>Custom Fields Power-Up v2</h1>
         <p>This Power-Up adds custom fields for buffers, buffer approach, buffer definition, zones, and zone definition.</p>
+        <div id="status">Initializing...</div>
     </div>
     
-    <script src="https://p.trellocdn.com/power-up.min.js"></script>
-    <script src="js/client.js"></script>
+    <script src="js/client.js?v=2"></script>
+    <script>
+        // Add status indicator
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('status').textContent = 'Power-Up v2 loaded successfully!';
+            console.log('[Custom Fields] Index page v2 loaded');
+        });
+    </script>
 </body>
 </html>
