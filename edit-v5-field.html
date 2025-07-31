@@ -14,10 +14,11 @@
             box-sizing: border-box;
         }
         
-        /* TEXT FIELDS: MUCH WIDER, SHORTER */
+        /* TEXT FIELDS: Fit within 900px window */
         textarea#field-input {
-            max-width: 1500px !important;  /* 50% wider than before */
-            min-height: 120px !important;  /* 33% shorter than before */
+            width: 800px !important;      /* Fit within 900px window with padding */
+            max-width: 800px !important;  
+            min-height: 120px !important; 
             padding: 18px;      
             resize: vertical;
             font-size: 16px;    
@@ -38,7 +39,8 @@
         }
         
         .popup-content.text-field {
-            max-width: 1650px !important;  /* Much wider for text */
+            max-width: 850px !important;   /* Fit 900px window */
+            width: 100%;
         }
         
         .popup-content.dropdown-field {
@@ -107,11 +109,11 @@
             font-size: 14px;     
         }
         
-        /* Force wide layout */
+        /* Force wide layout - fit 900px window */
         .wide-textarea {
-            width: 1500px !important;
-            max-width: 1500px !important;
-            min-width: 1500px !important;
+            width: 800px !important;
+            max-width: 800px !important;
+            min-width: 800px !important;
         }
     </style>
 </head>
