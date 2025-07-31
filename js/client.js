@@ -27,41 +27,50 @@ TrelloPowerUp.initialize({
       console.log('[Custom Fields] Board custom fields:', board.customFields ? board.customFields.length : 0);
       console.log('[Custom Fields] Card field items:', card.customFieldItems ? card.customFieldItems.length : 0);
       
-      if (board.customFields && card.customFieldItems) {
-        // Create a simple map of field names to values
-        const fieldMap = {};
+      if (board.customFields) {
+        // Create field values map first
+        const fieldValues = {};
+        if (card.customFieldItems) {
+          card.customFieldItems.forEach(function(item) {
+            if (item.value) {
+              fieldValues[item.idCustomField] = item.value;
+            }
+          });
+        }
         
-        // Map field IDs to names
+        // Process ALL custom fields, whether they have values or not
         board.customFields.forEach(function(field) {
-          fieldMap[field.id] = {
-            name: field.name,
-            type: field.type,
-            options: field.options
-          };
-        });
-        
-        // Process field values
-        card.customFieldItems.forEach(function(item) {
-          if (item.value && fieldMap[item.idCustomField]) {
-            const fieldInfo = fieldMap[item.idCustomField];
-            let displayValue = '';
+          let displayValue = '';
+          let badgeColor = 'light-gray';
+          
+          if (fieldValues[field.id]) {
+            // Field has a value
+            const value = fieldValues[field.id];
+            badgeColor = 'green';
             
-            // Handle different field types
-            if (fieldInfo.type === 'list' && item.value.option) {
-              displayValue = item.value.option.value.text;
-            } else if (fieldInfo.type === 'text' && item.value.text) {
-              displayValue = item.value.text.substring(0, 30) + (item.value.text.length > 30 ? '...' : '');
+            if (field.type === 'list' && value.option) {
+              displayValue = value.option.value.text;
+              badgeColor = 'blue';
+            } else if (field.type === 'text' && value.text) {
+              displayValue = value.text.substring(0, 30) + (value.text.length > 30 ? '...' : '');
+            } else if (field.type === 'number' && value.number !== undefined) {
+              displayValue = value.number.toString();
+            } else if (field.type === 'checkbox') {
+              displayValue = value.checked ? '✓ Yes' : '✗ No';
             }
-            
-            if (displayValue && fieldInfo.name) {
-              badges.push({
-                title: fieldInfo.name,
-                text: displayValue,
-                color: fieldInfo.type === 'list' ? 'blue' : 'green'
-              });
-              console.log('[Custom Fields] Added badge:', fieldInfo.name, '=', displayValue);
-            }
+          } else {
+            // Field is empty - still show it
+            displayValue = '(empty)';
+            badgeColor = 'light-gray';
           }
+          
+          badges.push({
+            title: field.name,
+            text: displayValue,
+            color: badgeColor
+          });
+          
+          console.log('[Custom Fields] Added badge:', field.name, '=', displayValue, `(${badgeColor})`);
         });
       }
       
