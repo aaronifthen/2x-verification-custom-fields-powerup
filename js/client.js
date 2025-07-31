@@ -1,6 +1,6 @@
 /* global TrelloPowerUp */
 
-console.log('[Custom Fields] *** VERSION 4 - POWER-UP ONLY ***');
+console.log('[Custom Fields] *** VERSION 5 - WIDER/SHORTER TEXT FIELDS ***');
 
 // Field definitions - your 5 custom fields
 const CUSTOM_FIELDS = [
@@ -20,7 +20,7 @@ const CUSTOM_FIELDS = [
 // Initialize the Power-Up with Power-Up storage only
 TrelloPowerUp.initialize({
   'card-detail-badges': function(t, options) {
-    console.log('[Custom Fields] *** V4 POWER-UP ONLY BADGES ***');
+    console.log('[Custom Fields] *** V5 WIDER/SHORTER TEXT FIELDS ***');
     
     // Get all Power-Up stored values
     const fieldPromises = CUSTOM_FIELDS.map(function(field) {
@@ -39,7 +39,7 @@ TrelloPowerUp.initialize({
         let displayValue = value || '(click to add)';
         let badgeColor = value ? (field.type === 'list' ? 'blue' : 'green') : 'light-gray';
         
-        // Popup sizing - text fields WIDER and SHORTER, dropdown unchanged
+        // Popup sizing - text fields 50% WIDER and 33% SHORTER
         let popupWidth = 400;  
         let popupHeight = 350; 
         
@@ -47,8 +47,8 @@ TrelloPowerUp.initialize({
           popupWidth = 1800;   // Increased by 50% from 1200 (1200 * 1.5 = 1800)
           popupHeight = 467;   // Reduced by 33% from 700 (700 * 0.67 = 467)
         } else if (field.type === 'list') {
-          popupWidth = 600;    // Back to original dropdown size  
-          popupHeight = 300;   // Back to original dropdown size
+          popupWidth = 600;    // Unchanged dropdown size  
+          popupHeight = 300;   // Unchanged dropdown size
         }
         
         badges.push({
@@ -58,23 +58,23 @@ TrelloPowerUp.initialize({
           callback: function(t) {
             return t.popup({
               title: 'Edit ' + field.name,
-              url: './edit-powerup-field.html?fieldId=' + field.id + '&fieldName=' + encodeURIComponent(field.name) + '&fieldType=' + field.type + '&v=4',
+              url: './edit-powerup-field.html?fieldId=' + field.id + '&fieldName=' + encodeURIComponent(field.name) + '&fieldType=' + field.type + '&v=5',
               height: popupHeight,
               width: popupWidth
             });
           }
         });
         
-        console.log('[Custom Fields] V4 Sized popup badge:', field.name, `(${popupWidth}x${popupHeight})`);
+        console.log('[Custom Fields] V5 Sized popup:', field.name, `(${popupWidth}x${popupHeight})`);
       });
       
-      console.log('[Custom Fields] *** V4 RETURNING', badges.length, 'PROPERLY SIZED BADGES ***');
+      console.log('[Custom Fields] *** V5 RETURNING', badges.length, 'WIDER/SHORTER BADGES ***');
       return badges;
       
     }).catch(function(error) {
-      console.error('[Custom Fields] V4 Error:', error);
+      console.error('[Custom Fields] V5 Error:', error);
       return [{
-        title: 'V4 Error',
+        title: 'V5 Error',
         text: 'Failed to load: ' + error.message,
         color: 'red'
       }];
@@ -82,4 +82,4 @@ TrelloPowerUp.initialize({
   }
 });
 
-console.log('[Custom Fields] *** VERSION 4 POWER-UP ONLY COMPLETE ***');
+console.log('[Custom Fields] *** VERSION 5 COMPLETE ***');
