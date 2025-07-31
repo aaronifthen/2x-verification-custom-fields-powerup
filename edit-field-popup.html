@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Edit Field</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="content">
+        <div id="field-editor">
+            <p>Loading field editor...</p>
+        </div>
+        <div class="buttons">
+            <button id="save-btn" class="primary">Save</button>
+            <button id="sync-btn">Sync with Trello</button>
+            <button id="clear-btn" class="danger">Clear</button>
+            <button id="cancel-btn">Cancel</button>
+        </div>
+    </div>
+    
+    <script src="https://p.trellocdn.com/power-up.min.js"></script>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const fieldId = urlParams.get('fieldId');
+        const fieldName = urlParams.get('fieldName');
+        const fieldType = urlParams.get('fieldType');
+        
+        const t = TrelloPowerUp.iframe();
+        
+        let fieldDefinition = null;
+        
+        t.render(function() {
+            console.log('[Edit Popup] Loading editor for:', fieldName, fieldType);
+            
+            return Promise.all([
+                t.card('customFieldItems'),
+                t.board('customFields'),
+                t.get('card', 'shared', 'customField-' + fieldId, '') // Power-Up storage
+            ]).then(function(results) {
+                const card = results[0];
+                const board = results[1];
+                const powerUpValue = results[2];
+                
+                // Find field definition
+                fieldDefinition = board.customFields.find(f => f.id === fieldId);
+                if (!fieldDefinition) {
+                    throw new Error('Field not found: ' + fieldName);
+                }
+                
+                // Find current Trello value
+                const trelloItem = card.customFieldItems.find(f => f.idCustomField === fieldId);
+                let trelloValue = '';
+                if (trelloItem && trelloItem.value) {
+                    if (fieldType === 'list' && trelloItem.value.option) {
+                        trelloValue = trelloItem.value.option.value.text;
+                    } else if (fieldType === 'text' && trelloItem.value.text) {
+                        trelloValue = trelloItem.value.text;
+                    } else if (fieldType === 'number' && trelloItem.value.number !== undefined) {
+                        trelloValue = trelloItem.value.number.toString();
+                    } else if (fieldType === 'checkbox') {
+                        trelloValue = trelloItem.value.checked ? 'true' : 'false';
+                    }
+                }
+                
+                // Use Power-Up value if available, otherwise use Trello value
+                let currentValue = powerUpValue || trelloValue;
+                
+                // Create editor based on field type
+                let editorHtml = `<h4>Edit ${fieldName}</h4>`;
+                
+                if (fieldType === 'text') {
+                    editorHtml += `
+                        <label for="field-input">${fieldName}:</label>
+                        <textarea id="field-input" rows="6" placeholder="Enter ${fieldName.toLowerCase()}...">${currentValue}</textarea>
+                    `;
+                } else if (fieldType === 'list') {
+                    let optionsHtml = '<option value="">Select option...</option>';
+                    fieldDefinition.options.forEach(function(option) {
+                        const selected = option.value.text === currentValue ? 'selected' : '';
+                        optionsHtml += `<option value="${option.value.text}" ${selected}>${option.value.text}</option>`;
+                    });
+                    
+                    editorHtml += `
+                        <label for="field-input">${fieldName}:</label>
+                        <select id="field-input">${optionsHtml}</select>
+                    `;
+                } else if (fieldType === 'number') {
+                    editorHtml += `
+                        <label for="field-input">${fieldName}:</label>
+                        <input type="number" id="field-input" placeholder="Enter number..." value="${currentValue}">
+                    `;
+                } else if (fieldType === 'checkbox') {
+                    const checked = currentValue === 'true' ? 'checked' : '';
+                    editorHtml += `
+                        <label class="field-option">
+                            <input type="checkbox" id="field-input" ${checked}>
+                            <span>${fieldName}</span>
+                        </label>
+                    `;
+                }
+                
+                // Show sync status
+                if (powerUpValue && powerUpValue !== trelloValue) {
+                    editorHtml += `
+                        <div class="message">
+                            <p><strong>Note:</strong> Power-Up value differs from Trello. Use "Sync with Trello" to match Trello's value.</p>
+                            <p><strong>Trello value:</strong> "${trelloValue}"</p>
+                            <p><strong>Power-Up value:</strong> "${powerUpValue}"</p>
+                        </div>
+                    `;
+                }
+                
+                document.getElementById('field-editor').innerHTML = editorHtml;
+                
+                // Event listeners
+                document.getElementById('save-btn').addEventListener('click', saveField);
+                document.getElementById('sync-btn').addEventListener('click', syncWithTrello);
+                document.getElementById('clear-btn').addEventListener('click', clearField);
+                document.getElementById('cancel-btn').addEventListener('click', cancelEdit);
+                
+            }).catch(function(error) {
+                console.error('[Edit Popup] Error:', error);
+                document.getElementById('field-editor').innerHTML = `
+                    <div class="message error">
+                        Error loading field: ${error.message}
+                    </div>
+                `;
+            });
+        });
+        
+        function saveField() {
+            const input = document.getElementById('field-input');
+            let value = '';
+            
+            if (fieldType === 'text') {
+                value = input.value.trim();
+            } else if (fieldType === 'list') {
+                value = input.value;
+            } else if (fieldType === 'number') {
+                value = input.value;
+            } else if (fieldType === 'checkbox') {
+                value = input.checked ? 'true' : 'false';
+            }
+            
+            console.log('[Edit Popup] Saving to Power-Up storage:', fieldName, '=', value);
+            
+            // Store in Power-Up storage (this works for editing)
+            t.set('card', 'shared', 'customField-' + fieldId, value).then(function() {
+                console.log('[Edit Popup] Saved successfully');
+                alert('Saved! The badge will update when you close this popup.');
+                t.closePopup();
+            }).catch(function(error) {
+                console.error('[Edit Popup] Error saving:', error);
+                alert('Error saving: ' + error.message);
+            });
+        }
+        
+        function syncWithTrello() {
+            // Copy Trello's value to Power-Up storage
+            t.card('customFieldItems').then(function(card) {
+                const trelloItem = card.customFieldItems.find(f => f.idCustomField === fieldId);
+                let trelloValue = '';
+                
+                if (trelloItem && trelloItem.value) {
+                    if (fieldType === 'list' && trelloItem.value.option) {
+                        trelloValue = trelloItem.value.option.value.text;
+                    } else if (fieldType === 'text' && trelloItem.value.text) {
+                        trelloValue = trelloItem.value.text;
+                    } else if (fieldType === 'number' && trelloItem.value.number !== undefined) {
+                        trelloValue = trelloItem.value.number.toString();
+                    } else if (fieldType === 'checkbox') {
+                        trelloValue = trelloItem.value.checked ? 'true' : 'false';
+                    }
+                }
+                
+                return t.set('card', 'shared', 'customField-' + fieldId, trelloValue);
+            }).then(function() {
+                alert('Synced with Trello value!');
+                location.reload(); // Reload to show updated value
+            }).catch(function(error) {
+                alert('Error syncing: ' + error.message);
+            });
+        }
+        
+        function clearField() {
+            if (confirm('Clear this field?')) {
+                t.remove('card', 'shared', 'customField-' + fieldId).then(function() {
+                    console.log('[Edit Popup] Field cleared');
+                    t.closePopup();
+                });
+            }
+        }
+        
+        function cancelEdit() {
+            t.closePopup();
+        }
+    </script>
+</body>
+</html>
