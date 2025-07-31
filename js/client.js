@@ -39,16 +39,16 @@ TrelloPowerUp.initialize({
         let displayValue = value || '(click to add)';
         let badgeColor = value ? (field.type === 'list' ? 'blue' : 'green') : 'light-gray';
         
-        // Popup sizing based on field type
-        let popupWidth = 400;
-        let popupHeight = 250;
+        // Popup sizing - 50% larger than before
+        let popupWidth = 600;  // Default increased from 400
+        let popupHeight = 375; // Default increased from 250
         
         if (field.type === 'text') {
-          popupWidth = 700;
-          popupHeight = 450;
+          popupWidth = 1050;   // Increased from 700 (50% larger)
+          popupHeight = 675;   // Increased from 450 (50% larger)
         } else if (field.type === 'list') {
-          popupWidth = 600;
-          popupHeight = 300;
+          popupWidth = 900;    // Increased from 600 (50% larger)
+          popupHeight = 450;   // Increased from 300 (50% larger)
         }
         
         badges.push({
@@ -65,10 +65,10 @@ TrelloPowerUp.initialize({
           }
         });
         
-        console.log('[Custom Fields] V4 Pure Power-Up badge:', field.name, '=', displayValue.substring(0, 30));
+        console.log('[Custom Fields] V4 Large popup badge:', field.name, '=', displayValue.substring(0, 30), `(${popupWidth}x${popupHeight})`);
       });
       
-      console.log('[Custom Fields] *** V4 RETURNING', badges.length, 'PURE POWER-UP BADGES ***');
+      console.log('[Custom Fields] *** V4 RETURNING', badges.length, 'LARGE POPUP BADGES ***');
       return badges;
       
     }).catch(function(error) {
