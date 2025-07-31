@@ -5,37 +5,61 @@
     <title>Edit Field</title>
     <link rel="stylesheet" href="style.css">
     <style>
+        /* Base styles for all field inputs */
         #field-input {
             width: 100%;
-            max-width: 580px;  /* Reduced from 500px to account for padding */
             font-size: 14px;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             line-height: 1.4;
-            resize: vertical;
             box-sizing: border-box;
         }
         
-        #field-input[type="text"], 
+        /* Text area styles - for wide popups (700px) */
         textarea#field-input {
+            max-width: 580px;  /* For 700px popup window */
             min-height: 120px;
             padding: 12px;
+            resize: vertical;
         }
         
+        /* Dropdown styles - for medium popups (600px) */
         select#field-input {
+            max-width: 480px;  /* For 600px popup window */
             min-height: 45px;
             padding: 8px 12px;
         }
         
+        /* Number input styles */
+        input[type="number"]#field-input {
+            max-width: 300px;
+            min-height: 45px;
+            padding: 8px 12px;
+        }
+        
+        /* Responsive container sizing */
         .popup-content {
             width: 100%;
-            max-width: 650px;  /* Container size to accommodate textarea + padding */
             box-sizing: border-box;
             padding: 20px;
         }
         
+        /* Text field popup container - 700px */
+        .popup-content.text-field {
+            max-width: 650px;
+        }
+        
+        /* Dropdown popup container - 600px */
+        .popup-content.dropdown-field {
+            max-width: 550px;
+        }
+        
+        /* Default popup container */
+        .popup-content.default-field {
+            max-width: 350px;
+        }
+        
         #content {
             width: 100%;
-            max-width: 650px;
             box-sizing: border-box;
             margin: 0;
             padding: 20px;
@@ -52,6 +76,18 @@
             display: flex;
             gap: 10px;
             justify-content: flex-end;
+        }
+        
+        h3 {
+            margin-top: 0;
+            color: #172b4d;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #172b4d;
         }
     </style>
 </head>
@@ -79,6 +115,16 @@
         
         t.render(function() {
             console.log('[Edit Popup] Loading editor for:', fieldName, fieldType);
+            
+            // Set appropriate container class based on field type
+            const content = document.getElementById('content');
+            if (fieldType === 'text') {
+                content.className = 'popup-content text-field';
+            } else if (fieldType === 'list') {
+                content.className = 'popup-content dropdown-field';
+            } else {
+                content.className = 'popup-content default-field';
+            }
             
             return Promise.all([
                 t.card('customFieldItems'),
@@ -188,7 +234,7 @@
                 value = input.checked ? 'true' : 'false';
             }
             
-            console.log('[Edit Popup] Saving:', fieldName, '=', value);
+            console.log('[Edit Popup] Saving:', fieldName, '=', value, `(${fieldType} field)`);
             
             // Save to Power-Up storage (this handles both storage and syncing automatically)
             t.set('card', 'shared', 'customField-' + fieldId, value).then(function() {
