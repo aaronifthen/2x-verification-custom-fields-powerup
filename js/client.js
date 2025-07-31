@@ -2,102 +2,86 @@
 
 console.log('[Custom Fields] Starting Power-Up initialization');
 
-// Field name mappings - update these to match your existing Trello custom field names
-const FIELD_MAPPINGS = {
-  'buffers': 'buffers',
-  'buffer-approach': 'buffer-approach',
-  'buffer-definition': 'buffer-definition', 
-  'zones': 'zones',
-  'zone-definition': 'zone-definition'
-};
-
-// Initialize the Power-Up
+// Initialize the Power-Up with minimal, working functionality
 TrelloPowerUp.initialize({
   'card-detail-badges': function(t, options) {
-    console.log('[Custom Fields] *** CARD-DETAIL-BADGES CALLED ***');
+    console.log('[Custom Fields] *** BADGES FUNCTION CALLED ***');
     
-    return t.card('customFieldItems').then(function(card) {
-      return t.board('customFields').then(function(board) {
-        console.log('[Custom Fields] Found custom fields:', board.customFields ? board.customFields.length : 0);
-        console.log('[Custom Fields] Found field items:', card.customFieldItems ? card.customFieldItems.length : 0);
+    // First, return a simple test badge to confirm the mechanism works
+    const testBadge = {
+      title: 'Power-Up',
+      text: 'Active',
+      color: 'green'
+    };
+    
+    // Try to get custom field data
+    return Promise.all([
+      t.card('customFieldItems').catch(() => ({ customFieldItems: [] })),
+      t.board('customFields').catch(() => ({ customFields: [] }))
+    ]).then(function(results) {
+      const card = results[0];
+      const board = results[1];
+      
+      const badges = [testBadge]; // Always include test badge
+      
+      console.log('[Custom Fields] Board custom fields:', board.customFields ? board.customFields.length : 0);
+      console.log('[Custom Fields] Card field items:', card.customFieldItems ? card.customFieldItems.length : 0);
+      
+      if (board.customFields && card.customFieldItems) {
+        // Create a simple map of field names to values
+        const fieldMap = {};
         
-        const badges = [];
-        const customFields = board.customFields || [];
-        const customFieldItems = card.customFieldItems || [];
-        
-        // Create field values map
-        const fieldValues = {};
-        customFieldItems.forEach(function(item) {
-          if (item.value) {
-            fieldValues[item.idCustomField] = item.value;
-          }
+        // Map field IDs to names
+        board.customFields.forEach(function(field) {
+          fieldMap[field.id] = {
+            name: field.name,
+            type: field.type,
+            options: field.options
+          };
         });
         
-        // Process each target field
-        Object.keys(FIELD_MAPPINGS).forEach(function(internalName) {
-          const mappedName = FIELD_MAPPINGS[internalName];
-          
-          // Find the field definition by name (case-insensitive)
-          const fieldDef = customFields.find(function(field) {
-            return field.name.toLowerCase() === mappedName.toLowerCase();
-          });
-          
-          if (fieldDef && fieldValues[fieldDef.id]) {
-            const value = fieldValues[fieldDef.id];
+        // Process field values
+        card.customFieldItems.forEach(function(item) {
+          if (item.value && fieldMap[item.idCustomField]) {
+            const fieldInfo = fieldMap[item.idCustomField];
             let displayValue = '';
             
             // Handle different field types
-            if (fieldDef.type === 'list' && value.option) {
-              displayValue = value.option.value.text;
-            } else if (fieldDef.type === 'text' && value.text) {
-              displayValue = value.text.length > 30 ? value.text.substring(0, 30) + '...' : value.text;
-            } else if (fieldDef.type === 'number' && value.number !== undefined) {
-              displayValue = value.number.toString();
-            } else if (fieldDef.type === 'date' && value.date) {
-              displayValue = new Date(value.date).toLocaleDateString();
-            } else if (fieldDef.type === 'checkbox') {
-              displayValue = value.checked ? '✓ Yes' : '✗ No';
+            if (fieldInfo.type === 'list' && item.value.option) {
+              displayValue = item.value.option.value.text;
+            } else if (fieldInfo.type === 'text' && item.value.text) {
+              displayValue = item.value.text.substring(0, 30) + (item.value.text.length > 30 ? '...' : '');
             }
             
-            if (displayValue) {
-              const badge = {
-                title: fieldDef.name,
+            if (displayValue && fieldInfo.name) {
+              badges.push({
+                title: fieldInfo.name,
                 text: displayValue,
-                color: fieldDef.type === 'list' ? 'blue' : 'green'
-              };
-              badges.push(badge);
-              console.log('[Custom Fields] BADGE CREATED:', badge.title, '=', badge.text);
+                color: fieldInfo.type === 'list' ? 'blue' : 'green'
+              });
+              console.log('[Custom Fields] Added badge:', fieldInfo.name, '=', displayValue);
             }
           }
         });
-        
-        // Add summary badge
-        badges.push({
-          title: 'Fields',
-          text: `${badges.length} active`,
-          color: 'light-gray'
-        });
-        
-        console.log('[Custom Fields] *** RETURNING', badges.length, 'BADGES ***');
-        console.log('[Custom Fields] Badge list:', badges.map(b => `${b.title}: ${b.text}`));
-        
-        return badges;
+      }
+      
+      console.log('[Custom Fields] *** RETURNING', badges.length, 'BADGES ***');
+      badges.forEach(function(badge, index) {
+        console.log(`[Custom Fields] Badge ${index}:`, badge.title, '=', badge.text, `(${badge.color})`);
       });
+      
+      return badges;
+      
     }).catch(function(error) {
-      console.error('[Custom Fields] Error getting custom fields:', error);
-      return [{
-        title: 'Error',
-        text: error.message,
-        color: 'red'
-      }];
-    });
-  },
-  
-  'show-settings': function(t, options) {
-    return t.popup({
-      title: 'Custom Fields Info',
-      url: './debug.html',
-      height: 400
+      console.error('[Custom Fields] Error in badges function:', error);
+      return [
+        testBadge,
+        {
+          title: 'Error',
+          text: 'Failed to load',
+          color: 'red'
+        }
+      ];
     });
   }
 });
