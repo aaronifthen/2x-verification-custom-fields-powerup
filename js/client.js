@@ -1,241 +1,85 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <title>Edit Field</title>
-    <link rel="stylesheet" href="style.css">
-    <style>
-        /* Base styles for all field inputs */
-        #field-input {
-            width: 100%;
-            font-size: 14px;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            line-height: 1.4;
-            box-sizing: border-box;
-        }
-        
-        /* Text area styles - MUCH WIDER for text fields (1200px window) */
-        textarea#field-input {
-            max-width: 1000px;  /* Much wider for text fields */
-            min-height: 180px;  /* Keep the taller height */
-            padding: 18px;      
-            resize: vertical;
-            font-size: 16px;    
-        }
-        
-        /* Dropdown styles - REVERTED to original size */
-        select#field-input {
-            max-width: 480px;   /* Back to original dropdown width */
-            min-height: 45px;   /* Back to original dropdown height */
-            padding: 8px 12px;  /* Back to original padding */
-            font-size: 14px;    /* Back to original font size */
-        }
-        
-        /* Container sizing */
-        .popup-content {
-            width: 100%;
-            box-sizing: border-box;
-            padding: 30px;     
-        }
-        
-        /* Text field container - MUCH WIDER */
-        .popup-content.text-field {
-            max-width: 1100px;  /* Much wider container for text fields */
-        }
-        
-        /* Dropdown container - REVERTED to original */
-        .popup-content.dropdown-field {
-            max-width: 550px;   /* Back to original dropdown container size */
-        }
-        
-        #content {
-            width: 100%;
-            box-sizing: border-box;
-            margin: 0;
-            padding: 30px;     
-        }
-        
-        body {
-            margin: 0;
-            padding: 0;
-            overflow-x: hidden;
-        }
-        
-        .buttons {
-            margin-top: 30px;  
-            display: flex;
-            gap: 15px;         
-            justify-content: flex-end;
-        }
-        
-        /* Button sizing - different for text vs dropdown */
-        button {
-            font-size: 16px;    
-        }
-        
-        /* Larger buttons for text fields */
-        .text-field button {
-            padding: 12px 20px; 
-        }
-        
-        /* Original button size for dropdowns */
-        .dropdown-field button {
-            padding: 10px 16px;  
-        }
-        
-        h3 {
-            margin-top: 0;
-            color: #172b4d;
-            margin-bottom: 20px;
-        }
-        
-        /* Larger heading for text fields */
-        .text-field h3 {
-            font-size: 24px;    
-        }
-        
-        /* Original heading size for dropdowns */
-        .dropdown-field h3 {
-            font-size: 18px;    
-        }
-        
-        label {
-            display: block;
-            margin-bottom: 12px; 
-            font-weight: 500;
-            color: #172b4d;
-        }
-        
-        /* Larger label for text fields */
-        .text-field label {
-            font-size: 16px;     
-        }
-        
-        /* Original label size for dropdowns */
-        .dropdown-field label {
-            font-size: 14px;     
-        }
-    </style>
-</head>
-<body>
-    <div id="content" class="popup-content">
-        <div id="field-editor">
-            <p>Loading field editor...</p>
-        </div>
-        <div class="buttons">
-            <button id="save-btn" class="primary">Save</button>
-            <button id="cancel-btn">Cancel</button>
-        </div>
-    </div>
+/* global TrelloPowerUp */
+
+console.log('[Custom Fields] *** VERSION 4 - POWER-UP ONLY ***');
+
+// Field definitions - your 5 custom fields
+const CUSTOM_FIELDS = [
+  { id: 'buffers', name: 'Buffers', type: 'text' },
+  { id: 'buffer-approach', name: 'Buffer Approach', type: 'list', options: [
+    'property-center-to-property-center',
+    'parcel-to-parcel', 
+    'natural-path',
+    'other-approach',
+    'not-applicable'
+  ]},
+  { id: 'buffer-definition', name: 'Buffer Definition', type: 'text' },
+  { id: 'zones', name: 'Zones', type: 'text' },
+  { id: 'zone-definition', name: 'Zone Definition', type: 'text' }
+];
+
+// Initialize the Power-Up with Power-Up storage only
+TrelloPowerUp.initialize({
+  'card-detail-badges': function(t, options) {
+    console.log('[Custom Fields] *** V4 POWER-UP ONLY BADGES ***');
     
-    <script src="https://p.trellocdn.com/power-up.min.js"></script>
-    <script>
-        const urlParams = new URLSearchParams(window.location.search);
-        const fieldId = urlParams.get('fieldId');
-        const fieldName = urlParams.get('fieldName');
-        const fieldType = urlParams.get('fieldType');
+    // Get all Power-Up stored values
+    const fieldPromises = CUSTOM_FIELDS.map(function(field) {
+      return t.get('card', 'shared', field.id, '').then(function(value) {
+        return { field: field, value: value };
+      });
+    });
+    
+    return Promise.all(fieldPromises).then(function(fieldData) {
+      const badges = [];
+      
+      fieldData.forEach(function(data) {
+        const field = data.field;
+        const value = data.value;
         
-        const t = TrelloPowerUp.iframe();
+        let displayValue = value || '(click to add)';
+        let badgeColor = value ? (field.type === 'list' ? 'blue' : 'green') : 'light-gray';
         
-        // Field definitions
-        const FIELD_DEFINITIONS = {
-          'buffer-approach': {
-            options: [
-              'property-center-to-property-center',
-              'parcel-to-parcel',
-              'natural-path', 
-              'other-approach',
-              'not-applicable'
-            ]
-          }
-        };
+        // Popup sizing - text fields WIDER, dropdown back to original
+        let popupWidth = 400;  
+        let popupHeight = 350; 
         
-        t.render(function() {
-            console.log('[Edit PowerUp] Loading WIDE text / original dropdown editor for:', fieldName, fieldType);
-            
-            // Set container class
-            const content = document.getElementById('content');
-            if (fieldType === 'text') {
-                content.className = 'popup-content text-field';
-            } else if (fieldType === 'list') {
-                content.className = 'popup-content dropdown-field';
-            }
-            
-            return t.get('card', 'shared', fieldId, '').then(function(currentValue) {
-                let editorHtml = `<h3>${fieldName}</h3>`;
-                
-                if (fieldType === 'text') {
-                    editorHtml += `
-                        <label for="field-input">${fieldName}:</label>
-                        <textarea id="field-input" rows="12" placeholder="Enter ${fieldName.toLowerCase()}...">${currentValue}</textarea>
-                    `;
-                } else if (fieldType === 'list') {
-                    const fieldDef = FIELD_DEFINITIONS[fieldId];
-                    if (fieldDef && fieldDef.options) {
-                        let optionsHtml = '<option value="">Select option...</option>';
-                        fieldDef.options.forEach(function(option) {
-                            const selected = option === currentValue ? 'selected' : '';
-                            optionsHtml += `<option value="${option}" ${selected}>${option}</option>`;
-                        });
-                        
-                        editorHtml += `
-                            <label for="field-input">${fieldName}:</label>
-                            <select id="field-input">${optionsHtml}</select>
-                        `;
-                    }
-                }
-                
-                document.getElementById('field-editor').innerHTML = editorHtml;
-                
-                // Event listeners - NO DELETE BUTTON
-                document.getElementById('save-btn').addEventListener('click', saveField);
-                document.getElementById('cancel-btn').addEventListener('click', cancelEdit);
-                
-                // Focus the input
-                setTimeout(function() {
-                    const input = document.getElementById('field-input');
-                    if (input) {
-                        input.focus();
-                        if (input.tagName === 'TEXTAREA') {
-                            input.setSelectionRange(input.value.length, input.value.length);
-                        }
-                    }
-                }, 100);
-                
-            }).catch(function(error) {
-                console.error('[Edit PowerUp] Error:', error);
-                document.getElementById('field-editor').innerHTML = `
-                    <div class="message error">
-                        Error loading field: ${error.message}
-                    </div>
-                `;
+        if (field.type === 'text') {
+          popupWidth = 1200;   // Even wider for text fields
+          popupHeight = 700;   // Taller than textarea
+        } else if (field.type === 'list') {
+          popupWidth = 600;    // Back to original dropdown size
+          popupHeight = 300;   // Back to original dropdown size
+        }
+        
+        badges.push({
+          title: field.name,
+          text: displayValue,
+          color: badgeColor,
+          callback: function(t) {
+            return t.popup({
+              title: 'Edit ' + field.name,
+              url: './edit-powerup-field.html?fieldId=' + field.id + '&fieldName=' + encodeURIComponent(field.name) + '&fieldType=' + field.type + '&v=4',
+              height: popupHeight,
+              width: popupWidth
             });
+          }
         });
         
-        function saveField() {
-            const input = document.getElementById('field-input');
-            let value = '';
-            
-            if (fieldType === 'text') {
-                value = input.value.trim();
-            } else if (fieldType === 'list') {
-                value = input.value;
-            }
-            
-            console.log('[Edit PowerUp] Saving field:', fieldName, '=', value, `(${fieldType})`);
-            
-            t.set('card', 'shared', fieldId, value).then(function() {
-                console.log('[Edit PowerUp] Field saved successfully');
-                t.closePopup();
-            }).catch(function(error) {
-                console.error('[Edit PowerUp] Error saving field:', error);
-                alert('Error saving: ' + error.message);
-            });
-        }
-        
-        function cancelEdit() {
-            t.closePopup();
-        }
-    </script>
-</body>
-</html>
+        console.log('[Custom Fields] V4 Sized popup badge:', field.name, `(${popupWidth}x${popupHeight})`);
+      });
+      
+      console.log('[Custom Fields] *** V4 RETURNING', badges.length, 'PROPERLY SIZED BADGES ***');
+      return badges;
+      
+    }).catch(function(error) {
+      console.error('[Custom Fields] V4 Error:', error);
+      return [{
+        title: 'V4 Error',
+        text: 'Failed to load: ' + error.message,
+        color: 'red'
+      }];
+    });
+  }
+});
+
+console.log('[Custom Fields] *** VERSION 4 POWER-UP ONLY COMPLETE ***');
