@@ -1,124 +1,80 @@
 /* global TrelloPowerUp */
 
-console.log('[Custom Fields] *** VERSION 3 LOADING ***');
+console.log('[Custom Fields] *** VERSION 4 - POWER-UP ONLY ***');
 
-// Initialize the Power-Up with full editing capability
+// Field definitions - your 5 custom fields
+const CUSTOM_FIELDS = [
+  { id: 'buffers', name: 'Buffers', type: 'text' },
+  { id: 'buffer-approach', name: 'Buffer Approach', type: 'list', options: [
+    'property-center-to-property-center',
+    'parcel-to-parcel', 
+    'natural-path',
+    'other-approach',
+    'not-applicable'
+  ]},
+  { id: 'buffer-definition', name: 'Buffer Definition', type: 'text' },
+  { id: 'zones', name: 'Zones', type: 'text' },
+  { id: 'zone-definition', name: 'Zone Definition', type: 'text' }
+];
+
+// Initialize the Power-Up with Power-Up storage only
 TrelloPowerUp.initialize({
   'card-detail-badges': function(t, options) {
-    console.log('[Custom Fields] *** V3 BADGES FUNCTION CALLED ***');
+    console.log('[Custom Fields] *** V4 POWER-UP ONLY BADGES ***');
     
-    return Promise.all([
-      t.card('customFieldItems').catch(() => ({ customFieldItems: [] })),
-      t.board('customFields').catch(() => ({ customFields: [] }))
-    ]).then(function(results) {
-      const card = results[0];
-      const board = results[1];
-      
-      if (!board.customFields || board.customFields.length === 0) {
-        return [{
-          title: 'No Custom Fields',
-          text: 'No custom fields found on this board',
-          color: 'red'
-        }];
-      }
-      
-      // Get Power-Up stored values for all fields
-      const fieldPromises = board.customFields.map(function(field) {
-        return t.get('card', 'shared', 'customField-' + field.id, '').then(function(powerUpValue) {
-          return { field: field, powerUpValue: powerUpValue };
-        });
+    // Get all Power-Up stored values
+    const fieldPromises = CUSTOM_FIELDS.map(function(field) {
+      return t.get('card', 'shared', field.id, '').then(function(value) {
+        return { field: field, value: value };
       });
+    });
+    
+    return Promise.all(fieldPromises).then(function(fieldData) {
+      const badges = [];
       
-      return Promise.all(fieldPromises).then(function(fieldData) {
-        const badges = [];
+      fieldData.forEach(function(data) {
+        const field = data.field;
+        const value = data.value;
         
-        // Create field values map from Trello
-        const trelloFieldValues = {};
-        if (card.customFieldItems) {
-          card.customFieldItems.forEach(function(item) {
-            if (item.value) {
-              trelloFieldValues[item.idCustomField] = item.value;
-            }
-          });
+        let displayValue = value || '(click to add)';
+        let badgeColor = value ? (field.type === 'list' ? 'blue' : 'green') : 'light-gray';
+        
+        // Popup sizing based on field type
+        let popupWidth = 400;
+        let popupHeight = 250;
+        
+        if (field.type === 'text') {
+          popupWidth = 700;
+          popupHeight = 450;
+        } else if (field.type === 'list') {
+          popupWidth = 600;
+          popupHeight = 300;
         }
         
-        // Process each field
-        fieldData.forEach(function(data) {
-          const field = data.field;
-          const powerUpValue = data.powerUpValue;
-          
-          let displayValue = '';
-          let badgeColor = 'light-gray';
-          let valueSource = '';
-          
-          // Priority: Power-Up value first, then Trello value
-          if (powerUpValue) {
-            displayValue = powerUpValue;
-            badgeColor = field.type === 'list' ? 'blue' : 'green';
-            valueSource = 'powerup';
-          } else if (trelloFieldValues[field.id]) {
-            // Get Trello value
-            const trelloValue = trelloFieldValues[field.id];
-            
-            if (field.type === 'list' && trelloValue.option) {
-              displayValue = trelloValue.option.value.text;
-              badgeColor = 'blue';
-            } else if (field.type === 'text' && trelloValue.text) {
-              displayValue = trelloValue.text;
-              badgeColor = 'green';
-            } else if (field.type === 'number' && trelloValue.number !== undefined) {
-              displayValue = trelloValue.number.toString();
-              badgeColor = 'green';
-            } else if (field.type === 'checkbox') {
-              displayValue = trelloValue.checked ? '✓ Yes' : '✗ No';
-              badgeColor = 'green';
-            }
-            valueSource = 'trello';
-          } else {
-            displayValue = '(click to add)';
-            badgeColor = 'light-gray';
-            valueSource = 'empty';
+        badges.push({
+          title: field.name,
+          text: displayValue,
+          color: badgeColor,
+          callback: function(t) {
+            return t.popup({
+              title: 'Edit ' + field.name,
+              url: './edit-powerup-field.html?fieldId=' + field.id + '&fieldName=' + encodeURIComponent(field.name) + '&fieldType=' + field.type + '&v=4',
+              height: popupHeight,
+              width: popupWidth
+            });
           }
-          
-          // Create badge with appropriate popup size based on field type
-          let popupWidth = 700; // Default width
-          let popupHeight = 450; // Default height
-          
-          if (field.type === 'text') {
-            // All TEXT fields get wide popup
-            popupWidth = 700;
-            popupHeight = 450;
-          } else if (field.type === 'list') {
-            // Dropdown fields get 50% wider
-            popupWidth = 600;
-            popupHeight = 300;
-          }
-          
-          badges.push({
-            title: field.name,
-            text: displayValue, // Full text, no truncation
-            color: badgeColor,
-            callback: function(t) {
-              return t.popup({
-                title: 'Edit ' + field.name,
-                url: './edit-field-popup.html?fieldId=' + field.id + '&fieldName=' + encodeURIComponent(field.name) + '&fieldType=' + field.type + '&v=3',
-                height: popupHeight,
-                width: popupWidth
-              });
-            }
-          });
-          
-          console.log('[Custom Fields] V3 Badge created:', field.name, '=', displayValue.substring(0, 50), `(${badgeColor}, ${valueSource}, ${popupWidth}x${popupHeight})`);
         });
         
-        console.log('[Custom Fields] *** V3 RETURNING', badges.length, 'BADGES ***');
-        return badges;
+        console.log('[Custom Fields] V4 Pure Power-Up badge:', field.name, '=', displayValue.substring(0, 30));
       });
       
+      console.log('[Custom Fields] *** V4 RETURNING', badges.length, 'PURE POWER-UP BADGES ***');
+      return badges;
+      
     }).catch(function(error) {
-      console.error('[Custom Fields] V3 Error:', error);
+      console.error('[Custom Fields] V4 Error:', error);
       return [{
-        title: 'V3 Error',
+        title: 'V4 Error',
         text: 'Failed to load: ' + error.message,
         color: 'red'
       }];
@@ -126,4 +82,4 @@ TrelloPowerUp.initialize({
   }
 });
 
-console.log('[Custom Fields] *** VERSION 3 INITIALIZATION COMPLETE ***');
+console.log('[Custom Fields] *** VERSION 4 POWER-UP ONLY COMPLETE ***');
