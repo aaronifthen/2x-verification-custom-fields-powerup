@@ -1,11 +1,11 @@
 /* global TrelloPowerUp */
 
-console.log('[Custom Fields] Starting Power-Up initialization');
+console.log('[Custom Fields] *** VERSION 3 LOADING ***');
 
 // Initialize the Power-Up with full editing capability
 TrelloPowerUp.initialize({
   'card-detail-badges': function(t, options) {
-    console.log('[Custom Fields] *** BADGES FUNCTION CALLED ***');
+    console.log('[Custom Fields] *** V3 BADGES FUNCTION CALLED ***');
     
     return Promise.all([
       t.card('customFieldItems').catch(() => ({ customFieldItems: [] })),
@@ -101,29 +101,29 @@ TrelloPowerUp.initialize({
             callback: function(t) {
               return t.popup({
                 title: 'Edit ' + field.name,
-                url: './edit-field-popup.html?fieldId=' + field.id + '&fieldName=' + encodeURIComponent(field.name) + '&fieldType=' + field.type,
+                url: './edit-field-popup.html?fieldId=' + field.id + '&fieldName=' + encodeURIComponent(field.name) + '&fieldType=' + field.type + '&v=3',
                 height: popupHeight,
                 width: popupWidth
               });
             }
           });
           
-          console.log('[Custom Fields] Badge created:', field.name, '=', displayValue.substring(0, 50), `(${badgeColor}, ${valueSource}, ${popupWidth}x${popupHeight})`);
+          console.log('[Custom Fields] V3 Badge created:', field.name, '=', displayValue.substring(0, 50), `(${badgeColor}, ${valueSource}, ${popupWidth}x${popupHeight})`);
         });
         
-        console.log('[Custom Fields] *** RETURNING', badges.length, 'BADGES (custom sizes per field type) ***');
+        console.log('[Custom Fields] *** V3 RETURNING', badges.length, 'BADGES ***');
         return badges;
       });
       
     }).catch(function(error) {
-      console.error('[Custom Fields] Error in badges function:', error);
+      console.error('[Custom Fields] V3 Error:', error);
       return [{
-        title: 'Error',
-        text: 'Failed to load fields: ' + error.message,
+        title: 'V3 Error',
+        text: 'Failed to load: ' + error.message,
         color: 'red'
       }];
     });
   }
 });
 
-console.log('[Custom Fields] Power-Up initialization complete');
+console.log('[Custom Fields] *** VERSION 3 INITIALIZATION COMPLETE ***');
