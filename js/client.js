@@ -39,13 +39,13 @@ TrelloPowerUp.initialize({
         let displayValue = value || '(click to add)';
         let badgeColor = value ? (field.type === 'list' ? 'blue' : 'green') : 'light-gray';
         
-        // Popup sizing - text fields 50% WIDER and 33% SHORTER
+        // Popup sizing - adjusted for Trello's window limits
         let popupWidth = 400;  
         let popupHeight = 350; 
         
         if (field.type === 'text') {
-          popupWidth = 1800;   // Increased by 50% from 1200 (1200 * 1.5 = 1800)
-          popupHeight = 467;   // Reduced by 33% from 700 (700 * 0.67 = 467)
+          popupWidth = 900;    // More realistic max width for Trello popups
+          popupHeight = 400;   // Reasonable height
         } else if (field.type === 'list') {
           popupWidth = 600;    // Unchanged dropdown size  
           popupHeight = 300;   // Unchanged dropdown size
