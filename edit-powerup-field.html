@@ -14,41 +14,43 @@
             box-sizing: border-box;
         }
         
-        /* Text area styles - for wide popups (700px) */
+        /* Text area styles - 50% larger for big popups (1050px) */
         textarea#field-input {
-            max-width: 580px;
-            min-height: 120px;
-            padding: 12px;
+            max-width: 870px;  /* Increased from 580px (50% larger) */
+            min-height: 180px; /* Increased from 120px (50% larger) */
+            padding: 18px;     /* Increased padding too */
             resize: vertical;
+            font-size: 16px;   /* Slightly larger text */
         }
         
-        /* Dropdown styles - for medium popups (600px) */
+        /* Dropdown styles - 50% larger for large popups (900px) */
         select#field-input {
-            max-width: 480px;
-            min-height: 45px;
-            padding: 8px 12px;
+            max-width: 720px;  /* Increased from 480px (50% larger) */
+            min-height: 68px;  /* Increased from 45px (50% larger) */
+            padding: 12px 18px; /* Increased padding */
+            font-size: 16px;   /* Larger text */
         }
         
-        /* Container sizing */
+        /* Container sizing - 50% larger */
         .popup-content {
             width: 100%;
             box-sizing: border-box;
-            padding: 20px;
+            padding: 30px;     /* Increased from 20px */
         }
         
         .popup-content.text-field {
-            max-width: 650px;
+            max-width: 975px;  /* Increased from 650px (50% larger) */
         }
         
         .popup-content.dropdown-field {
-            max-width: 550px;
+            max-width: 825px;  /* Increased from 550px (50% larger) */
         }
         
         #content {
             width: 100%;
             box-sizing: border-box;
             margin: 0;
-            padding: 20px;
+            padding: 30px;     /* Increased from 20px */
         }
         
         body {
@@ -58,22 +60,31 @@
         }
         
         .buttons {
-            margin-top: 20px;
+            margin-top: 30px;  /* Increased from 20px */
             display: flex;
-            gap: 10px;
+            gap: 15px;         /* Increased from 10px */
             justify-content: flex-end;
+        }
+        
+        /* Larger buttons */
+        button {
+            padding: 12px 20px; /* Increased from default */
+            font-size: 16px;    /* Larger text */
         }
         
         h3 {
             margin-top: 0;
             color: #172b4d;
+            font-size: 24px;    /* Larger heading */
+            margin-bottom: 20px;
         }
         
         label {
             display: block;
-            margin-bottom: 8px;
+            margin-bottom: 12px; /* Increased from 8px */
             font-weight: 500;
             color: #172b4d;
+            font-size: 16px;     /* Larger label text */
         }
     </style>
 </head>
@@ -84,7 +95,6 @@
         </div>
         <div class="buttons">
             <button id="save-btn" class="primary">Save</button>
-            <button id="delete-btn" class="danger">Delete</button>
             <button id="cancel-btn">Cancel</button>
         </div>
     </div>
@@ -112,7 +122,7 @@
         };
         
         t.render(function() {
-            console.log('[Edit PowerUp] Loading editor for:', fieldName, fieldType);
+            console.log('[Edit PowerUp] Loading LARGE editor for:', fieldName, fieldType);
             
             // Set container class
             const content = document.getElementById('content');
@@ -128,7 +138,7 @@
                 if (fieldType === 'text') {
                     editorHtml += `
                         <label for="field-input">${fieldName}:</label>
-                        <textarea id="field-input" rows="8" placeholder="Enter ${fieldName.toLowerCase()}...">${currentValue}</textarea>
+                        <textarea id="field-input" rows="12" placeholder="Enter ${fieldName.toLowerCase()}...">${currentValue}</textarea>
                     `;
                 } else if (fieldType === 'list') {
                     const fieldDef = FIELD_DEFINITIONS[fieldId];
@@ -148,9 +158,8 @@
                 
                 document.getElementById('field-editor').innerHTML = editorHtml;
                 
-                // Event listeners
+                // Event listeners - NO DELETE BUTTON
                 document.getElementById('save-btn').addEventListener('click', saveField);
-                document.getElementById('delete-btn').addEventListener('click', deleteField);
                 document.getElementById('cancel-btn').addEventListener('click', cancelEdit);
                 
                 // Focus the input
@@ -184,27 +193,15 @@
                 value = input.value;
             }
             
-            console.log('[Edit PowerUp] Saving:', fieldName, '=', value);
+            console.log('[Edit PowerUp] Saving LARGE field:', fieldName, '=', value);
             
             t.set('card', 'shared', fieldId, value).then(function() {
-                console.log('[Edit PowerUp] Saved successfully');
+                console.log('[Edit PowerUp] Large field saved successfully');
                 t.closePopup();
             }).catch(function(error) {
-                console.error('[Edit PowerUp] Error saving:', error);
+                console.error('[Edit PowerUp] Error saving large field:', error);
                 alert('Error saving: ' + error.message);
             });
-        }
-        
-        function deleteField() {
-            if (confirm('Delete this field value?')) {
-                t.remove('card', 'shared', fieldId).then(function() {
-                    console.log('[Edit PowerUp] Field deleted');
-                    t.closePopup();
-                }).catch(function(error) {
-                    console.error('[Edit PowerUp] Error deleting:', error);
-                    alert('Error deleting: ' + error.message);
-                });
-            }
         }
         
         function cancelEdit() {
