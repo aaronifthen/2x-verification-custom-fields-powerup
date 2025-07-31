@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Field Information</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="content">
+        <div id="field-info">
+            <p>Loading field information...</p>
+        </div>
+        <div class="buttons">
+            <button id="edit-native-btn" class="primary">Edit in Trello</button>
+            <button id="close-btn">Close</button>
+        </div>
+    </div>
+    
+    <script src="https://p.trellocdn.com/power-up.min.js"></script>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const fieldId = urlParams.get('fieldId');
+        const fieldName = urlParams.get('fieldName');
+        const fieldType = urlParams.get('fieldType');
+        
+        const t = TrelloPowerUp.iframe();
+        
+        t.render(function() {
+            return Promise.all([
+                t.card('customFieldItems'),
+                t.board('customFields')
+            ]).then(function(results) {
+                const card = results[0];
+                const board = results[1];
+                
+                // Find field definition
+                const fieldDef = board.customFields.find(f => f.id === fieldId);
+                const fieldItem = card.customFieldItems.find(f => f.idCustomField === fieldId);
+                
+                let infoHtml = `
+                    <h4>${fieldName}</h4>
+                    <p><strong>Type:</strong> ${fieldType}</p>
+                `;
+                
+                if (fieldItem && fieldItem.value) {
+                    let currentValue = '';
+                    if (fieldType === 'list' && fieldItem.value.option) {
+                        currentValue = fieldItem.value.option.value.text;
+                    } else if (fieldType === 'text' && fieldItem.value.text) {
+                        currentValue = fieldItem.value.text;
+                    } else if (fieldType === 'number' && fieldItem.value.number !== undefined) {
+                        currentValue = fieldItem.value.number.toString();
+                    } else if (fieldType === 'checkbox') {
+                        currentValue = fieldItem.value.checked ? 'Checked' : 'Unchecked';
+                    }
+                    
+                    infoHtml += `
+                        <p><strong>Current Value:</strong></p>
+                        <div class="field-value">${currentValue}</div>
+                    `;
+                } else {
+                    infoHtml += `
+                        <p><strong>Status:</strong> <em>No value set</em></p>
+                    `;
+                }
+                
+                if (fieldType === 'list' && fieldDef.options) {
+                    infoHtml += `
+                        <p><strong>Available Options:</strong></p>
+                        <ul>
+                    `;
+                    fieldDef.options.forEach(function(option) {
+                        infoHtml += `<li>${option.value.text}</li>`;
+                    });
+                    infoHtml += `</ul>`;
+                }
+                
+                infoHtml += `
+                    <div class="message">
+                        <p><strong>Note:</strong> To edit this field, use Trello's native Custom Fields interface in the card details.</p>
+                    </div>
+                `;
+                
+                document.getElementById('field-info').innerHTML = infoHtml;
+            });
+        });
+        
+        document.getElementById('edit-native-btn').addEventListener('click', function() {
+            alert('Look for the "Custom Fields" section in this card and click on the ' + fieldName + ' field to edit it directly in Trello.');
+            t.closePopup();
+        });
+        
+        document.getElementById('close-btn').addEventListener('click', function() {
+            t.closePopup();
+        });
+    </script>
+</body>
+</html>
