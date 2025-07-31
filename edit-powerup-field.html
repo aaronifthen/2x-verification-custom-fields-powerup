@@ -167,7 +167,7 @@
                 if (fieldType === 'text') {
                     editorHtml += `
                         <label for="field-input">${fieldName}:</label>
-                        <textarea id="field-input" rows="10" placeholder="Enter ${fieldName.toLowerCase()}...">${currentValue}</textarea>
+                        <textarea id="field-input" rows="12" placeholder="Enter ${fieldName.toLowerCase()}...">${currentValue}</textarea>
                     `;
                 } else if (fieldType === 'list') {
                     const fieldDef = FIELD_DEFINITIONS[fieldId];
