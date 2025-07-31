@@ -2,19 +2,11 @@
 
 console.log('[Custom Fields] Starting Power-Up initialization');
 
-// Initialize the Power-Up with minimal, working functionality
+// Initialize the Power-Up with clickable badges
 TrelloPowerUp.initialize({
   'card-detail-badges': function(t, options) {
     console.log('[Custom Fields] *** BADGES FUNCTION CALLED ***');
     
-    // First, return a simple test badge to confirm the mechanism works
-    const testBadge = {
-      title: 'Power-Up',
-      text: 'Active',
-      color: 'green'
-    };
-    
-    // Try to get custom field data
     return Promise.all([
       t.card('customFieldItems').catch(() => ({ customFieldItems: [] })),
       t.board('customFields').catch(() => ({ customFields: [] }))
@@ -22,7 +14,7 @@ TrelloPowerUp.initialize({
       const card = results[0];
       const board = results[1];
       
-      const badges = [testBadge]; // Always include test badge
+      const badges = [];
       
       console.log('[Custom Fields] Board custom fields:', board.customFields ? board.customFields.length : 0);
       console.log('[Custom Fields] Card field items:', card.customFieldItems ? card.customFieldItems.length : 0);
@@ -38,7 +30,7 @@ TrelloPowerUp.initialize({
           });
         }
         
-        // Process ALL custom fields, whether they have values or not
+        // Process ALL custom fields with click handlers
         board.customFields.forEach(function(field) {
           let displayValue = '';
           let badgeColor = 'light-gray';
@@ -59,38 +51,52 @@ TrelloPowerUp.initialize({
               displayValue = value.checked ? '✓ Yes' : '✗ No';
             }
           } else {
-            // Field is empty - still show it
-            displayValue = '(empty)';
+            // Field is empty
+            displayValue = '(click to edit)';
             badgeColor = 'light-gray';
           }
           
           badges.push({
             title: field.name,
             text: displayValue,
-            color: badgeColor
+            color: badgeColor,
+            callback: function(t) {
+              return t.popup({
+                title: field.name + ' - Field Info',
+                url: './field-info.html?fieldId=' + field.id + '&fieldName=' + encodeURIComponent(field.name) + '&fieldType=' + field.type,
+                height: 250
+              });
+            }
           });
           
-          console.log('[Custom Fields] Added badge:', field.name, '=', displayValue, `(${badgeColor})`);
+          console.log('[Custom Fields] Added clickable badge:', field.name, '=', displayValue, `(${badgeColor})`);
         });
       }
       
-      console.log('[Custom Fields] *** RETURNING', badges.length, 'BADGES ***');
-      badges.forEach(function(badge, index) {
-        console.log(`[Custom Fields] Badge ${index}:`, badge.title, '=', badge.text, `(${badge.color})`);
+      // Add info badge
+      badges.push({
+        title: 'Custom Fields',
+        text: 'Enhanced View',
+        color: 'green',
+        callback: function(t) {
+          return t.popup({
+            title: 'Custom Fields Power-Up',
+            url: './info.html',
+            height: 300
+          });
+        }
       });
       
+      console.log('[Custom Fields] *** RETURNING', badges.length, 'BADGES ***');
       return badges;
       
     }).catch(function(error) {
       console.error('[Custom Fields] Error in badges function:', error);
-      return [
-        testBadge,
-        {
-          title: 'Error',
-          text: 'Failed to load',
-          color: 'red'
-        }
-      ];
+      return [{
+        title: 'Error',
+        text: 'Failed to load',
+        color: 'red'
+      }];
     });
   }
 });
