@@ -7,11 +7,12 @@
     <style>
         #field-input {
             width: 100%;
-            min-width: 500px;
+            max-width: 580px;  /* Reduced from 500px to account for padding */
             font-size: 14px;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             line-height: 1.4;
             resize: vertical;
+            box-sizing: border-box;
         }
         
         #field-input[type="text"], 
@@ -26,11 +27,31 @@
         }
         
         .popup-content {
-            min-width: 520px;
+            width: 100%;
+            max-width: 650px;  /* Container size to accommodate textarea + padding */
+            box-sizing: border-box;
+            padding: 20px;
         }
         
         #content {
-            min-width: 520px;
+            width: 100%;
+            max-width: 650px;
+            box-sizing: border-box;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden; /* Prevent horizontal scroll */
+        }
+        
+        .buttons {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
         }
     </style>
 </head>
