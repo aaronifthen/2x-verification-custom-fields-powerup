@@ -1,77 +1,134 @@
-/* global TrelloPowerUp */
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Edit Field</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        .container {
+            width: 100%;
+            max-width: 410px; /* Accounting for 20px margin on each side */
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        textarea {
+            width: 100%;
+            height: 300px; /* Increased height to accommodate link visibility */
+            resize: none;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+        select {
+            width: 100%;
+            height: 40px;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            padding: 8px;
+        }
+        .button-container {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+        button {
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .doc-link {
+            text-align: center;
+            margin-top: 10px;
+        }
+        .doc-link a {
+            font-size: 14px;
+            color: #1a73e8;
+            text-decoration: none;
+        }
+        .doc-link a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="editor"></div>
+        <div class="button-container">
+            <button id="save">Save</button>
+            <button id="cancel">Cancel</button>
+        </div>
+        <div class="doc-link" id="docLink" style="display: none;">
+            <a href="https://docs.google.com/document/d/1Gd47aCyoOOmjra49dSeDzbf8kTXiUNLEGBgSDD8OhM8/edit?usp=sharing" target="_blank">Online documentation</a>
+        </div>
+    </div>
 
-console.log('[Custom Fields] *** VERSION 5 - INCREASED POPUP HEIGHT FOR TEXT FIELDS ***');
-
-// Field definitions - your 5 custom fields
-const CUSTOM_FIELDS = [
-  { id: 'buffers', name: 'Buffers', type: 'text' },
-  { id: 'buffer-approach', name: 'Buffer Approach', type: 'list', options: [
-    'property-center-to-property-center',
-    'parcel-to-parcel', 
-    'natural-path',
-    'other-approach',
-    'not-applicable'
-  ]},
-  { id: 'buffer-definition', name: 'Buffer Definition', type: 'text' },
-  { id: 'zones', name: 'Zones', type: 'text' },
-  { id: 'zone-definition', name: 'Zone Definition', type: 'text' }
-];
-
-// Initialize the Power-Up with Power-Up storage only
-TrelloPowerUp.initialize({
-  'card-detail-badges': function(t, options) {
-    console.log('[Custom Fields] *** V5 INCREASED POPUP HEIGHT FOR TEXT FIELDS ***');
-    
-    // Get all Power-Up stored values
-    const fieldPromises = CUSTOM_FIELDS.map(function(field) {
-      return t.get('card', 'shared', field.id, '').then(function(value) {
-        return { field: field, value: value };
-      });
-    });
-    
-    return Promise.all(fieldPromises).then(function(fieldData) {
-      const badges = [];
-      
-      fieldData.forEach(function(data) {
-        const field = data.field;
-        const value = data.value;
+    <script src="https://p.trellocdn.com/power-up.min.js"></script>
+    <script>
+        /* global TrelloPowerUp */
+        const t = TrelloPowerUp.iframe();
         
-        let displayValue = value || '(click to add)';
-        let badgeColor = value ? (field.type === 'list' ? 'blue' : 'green') : 'light-gray';
+        // Parse query parameters
+        const params = new URLSearchParams(window.location.search);
+        const fieldId = params.get('fieldId');
+        const fieldName = decodeURIComponent(params.get('fieldName'));
+        const fieldType = params.get('fieldType');
         
-        // Popup sizing - increased by 40px for text fields
-        let popupWidth = 450;  
-        let popupHeight = field.type === 'list' ? 350 : (field.id === 'buffers' ? 440 : 390); 
+        // Get editor div
+        const editorDiv = document.getElementById('editor');
         
-        badges.push({
-          title: field.name,
-          text: displayValue,
-          color: badgeColor,
-          callback: function(t) {
-            return t.popup({
-              title: 'Edit ' + field.name,
-              url: './edit-v5-field.html?fieldId=' + field.id + '&fieldName=' + encodeURIComponent(field.name) + '&fieldType=' + field.type + '&v=5',
-              height: popupHeight,
-              width: popupWidth
+        // Show documentation link only for buffers field
+        if (fieldId === 'buffers') {
+            document.getElementById('docLink').style.display = 'block';
+        }
+        
+        // Create input based on field type
+        let inputElement;
+        if (fieldType === 'text') {
+            inputElement = document.createElement('textarea');
+            inputElement.id = 'fieldValue';
+        } else if (fieldType === 'list') {
+            inputElement = document.createElement('select');
+            inputElement.id = 'fieldValue';
+            // Add options for buffer-approach
+            const options = [
+                { value: 'property-center-to-property-center', text: 'Property Center to Property Center' },
+                { value: 'parcel-to-parcel', text: 'Parcel to Parcel' },
+                { value: 'natural-path', text: 'Natural Path' },
+                { value: 'other-approach', text: 'Other Approach' },
+                { value: 'not-applicable', text: 'Not Applicable' }
+            ];
+            options.forEach(opt => {
+                const option = document.createElement('option');
+                option.value = opt.value;
+                option.text = opt.text;
+                inputElement.appendChild(option);
             });
-          }
+        }
+        
+        // Load current value
+        t.get('card', 'shared', fieldId, '').then(value => {
+            inputElement.value = value;
+            editorDiv.appendChild(inputElement);
         });
         
-        console.log('[Custom Fields] V5 Sized popup:', field.name, `(${popupWidth}x${popupHeight})`);
-      });
-      
-      console.log('[Custom Fields] *** V5 RETURNING', badges.length, 'UPDATED BADGES ***');
-      return badges;
-      
-    }).catch(function(error) {
-      console.error('[Custom Fields] V5 Error:', error);
-      return [{
-        title: 'V5 Error',
-        text: 'Failed to load: ' + error.message,
-        color: 'red'
-      }];
-    });
-  }
-});
-
-console.log('[Custom Fields] *** VERSION 5 COMPLETE ***');
+        // Save button
+        document.getElementById('save').addEventListener('click', () => {
+            const value = document.getElementById('fieldValue').value;
+            t.set('card', 'shared', fieldId, value)
+                .then(() => t.closePopup());
+        });
+        
+        // Cancel button
+        document.getElementById('cancel').addEventListener('click', () => {
+            t.closePopup();
+        });
+    </script>
+</body>
+</html>
