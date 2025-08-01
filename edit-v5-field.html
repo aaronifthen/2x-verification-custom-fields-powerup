@@ -19,7 +19,6 @@
         }
         textarea {
             width: 100%;
-            height: 300px; /* Increased height to accommodate link visibility */
             resize: none;
             font-family: Arial, sans-serif;
             font-size: 14px;
@@ -93,6 +92,8 @@
         if (fieldType === 'text') {
             inputElement = document.createElement('textarea');
             inputElement.id = 'fieldValue';
+            // Set textarea height based on fieldId
+            inputElement.style.height = fieldId === 'buffers' ? '222px' : '255px';
         } else if (fieldType === 'list') {
             inputElement = document.createElement('select');
             inputElement.id = 'fieldValue';
