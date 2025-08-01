@@ -1,6 +1,6 @@
 /* global TrelloPowerUp */
 
-console.log('[Custom Fields] *** VERSION 5 - WIDER/SHORTER TEXT FIELDS ***');
+console.log('[Custom Fields] *** VERSION 5 - UPDATED POPUP SIZE ***');
 
 // Field definitions - your 5 custom fields
 const CUSTOM_FIELDS = [
@@ -20,7 +20,7 @@ const CUSTOM_FIELDS = [
 // Initialize the Power-Up with Power-Up storage only
 TrelloPowerUp.initialize({
   'card-detail-badges': function(t, options) {
-    console.log('[Custom Fields] *** V5 WIDER/SHORTER TEXT FIELDS ***');
+    console.log('[Custom Fields] *** V5 UPDATED POPUP SIZE ***');
     
     // Get all Power-Up stored values
     const fieldPromises = CUSTOM_FIELDS.map(function(field) {
@@ -39,17 +39,9 @@ TrelloPowerUp.initialize({
         let displayValue = value || '(click to add)';
         let badgeColor = value ? (field.type === 'list' ? 'blue' : 'green') : 'light-gray';
         
-        // Popup sizing - adjusted for Trello's window limits
-        let popupWidth = 400;  
+        // Popup sizing - updated to 450x350px
+        let popupWidth = 450;  
         let popupHeight = 350; 
-        
-        if (field.type === 'text') {
-          popupWidth = 900;    // More realistic max width for Trello popups
-          popupHeight = 400;   // Reasonable height
-        } else if (field.type === 'list') {
-          popupWidth = 600;    // Unchanged dropdown size  
-          popupHeight = 300;   // Unchanged dropdown size
-        }
         
         badges.push({
           title: field.name,
@@ -68,7 +60,7 @@ TrelloPowerUp.initialize({
         console.log('[Custom Fields] V5 Sized popup:', field.name, `(${popupWidth}x${popupHeight})`);
       });
       
-      console.log('[Custom Fields] *** V5 RETURNING', badges.length, 'WIDER/SHORTER BADGES ***');
+      console.log('[Custom Fields] *** V5 RETURNING', badges.length, 'UPDATED BADGES ***');
       return badges;
       
     }).catch(function(error) {
