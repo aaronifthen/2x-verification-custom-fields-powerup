@@ -1,237 +1,114 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="utf-8">
+    <meta charset="UTF-8">
     <title>Edit Field</title>
-    <link rel="stylesheet" href="style.css">
     <style>
-        /* FORCE NEW STYLES - V5 WIDE TEXT FIELDS */
-        #field-input {
-            width: 100%;
-            font-size: 14px;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            line-height: 1.4;
-            box-sizing: border-box;
-        }
-        
-        /* TEXT FIELDS: Fit within 900px window */
-        textarea#field-input {
-            width: 800px !important;      /* Fit within 900px window with padding */
-            max-width: 800px !important;  
-            min-height: 120px !important; 
-            padding: 18px;      
-            resize: vertical;
-            font-size: 16px;    
-        }
-        
-        /* DROPDOWN: Slightly wider */
-        select#field-input {
-            max-width: 500px !important;   
-            min-height: 45px;   
-            padding: 8px 12px;  
-            font-size: 14px;    
-        }
-        
-        .popup-content {
-            width: 100%;
-            box-sizing: border-box;
-            padding: 30px;     
-        }
-        
-        .popup-content.text-field {
-            max-width: 850px !important;   /* Fit 900px window */
-            width: 100%;
-        }
-        
-        .popup-content.dropdown-field {
-            max-width: 550px;   
-        }
-        
-        #content {
-            width: 100% !important;
-            box-sizing: border-box;
-            margin: 0;
-            padding: 30px;     
-        }
-        
         body {
-            margin: 0;
+            font-family: Arial, sans-serif;
+            margin: 20px;
             padding: 0;
-            overflow-x: hidden;
-            background: #f8f9fa;
+            box-sizing: border-box;
         }
-        
-        .buttons {
-            margin-top: 30px;  
+        .container {
+            width: 100%;
+            max-width: 410px; /* Accounting for 20px margin on each side */
             display: flex;
-            gap: 15px;         
+            flex-direction: column;
+            gap: 10px;
+        }
+        textarea {
+            width: 100%;
+            height: 260px; /* Maximized height for textarea, leaving space for buttons */
+            resize: none;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+        select {
+            width: 100%;
+            height: 40px;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            padding: 8px;
+        }
+        .button-container {
+            display: flex;
+            gap: 10px;
             justify-content: flex-end;
         }
-        
         button {
-            font-size: 16px;    
-        }
-        
-        .text-field button {
-            padding: 12px 20px; 
-        }
-        
-        .dropdown-field button {
-            padding: 10px 16px;  
-        }
-        
-        h3 {
-            margin-top: 0;
-            color: #172b4d;
-            margin-bottom: 20px;
-        }
-        
-        .text-field h3 {
-            font-size: 24px;    
-        }
-        
-        .dropdown-field h3 {
-            font-size: 18px;    
-        }
-        
-        label {
-            display: block;
-            margin-bottom: 12px; 
-            font-weight: 500;
-            color: #172b4d;
-        }
-        
-        .text-field label {
-            font-size: 16px;     
-        }
-        
-        .dropdown-field label {
-            font-size: 14px;     
-        }
-        
-        /* Force wide layout - fit 900px window */
-        .wide-textarea {
-            width: 800px !important;
-            max-width: 800px !important;
-            min-width: 800px !important;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 14px;
         }
     </style>
 </head>
 <body>
-    <div id="content" class="popup-content">
-        <div id="field-editor">
-            <p>Loading V5 wide field editor...</p>
-        </div>
-        <div class="buttons">
-            <button id="save-btn" class="primary">Save</button>
-            <button id="cancel-btn">Cancel</button>
+    <div class="container">
+        <div id="editor"></div>
+        <div class="button-container">
+            <button id="save">Save</button>
+            <button id="cancel">Cancel</button>
         </div>
     </div>
-    
+
     <script src="https://p.trellocdn.com/power-up.min.js"></script>
     <script>
-        const urlParams = new URLSearchParams(window.location.search);
-        const fieldId = urlParams.get('fieldId');
-        const fieldName = urlParams.get('fieldName');
-        const fieldType = urlParams.get('fieldType');
-        
+        /* global TrelloPowerUp */
         const t = TrelloPowerUp.iframe();
         
-        const FIELD_DEFINITIONS = {
-          'buffer-approach': {
-            options: [
-              'property-center-to-property-center',
-              'parcel-to-parcel',
-              'natural-path', 
-              'other-approach',
-              'not-applicable'
-            ]
-          }
-        };
+        // Parse query parameters
+        const params = new URLSearchParams(window.location.search);
+        const fieldId = params.get('fieldId');
+        const fieldName = decodeURIComponent(params.get('fieldName'));
+        const fieldType = params.get('fieldType');
         
-        t.render(function() {
-            console.log('[V5 Edit] Loading WIDE editor for:', fieldName, fieldType);
-            
-            const content = document.getElementById('content');
-            if (fieldType === 'text') {
-                content.className = 'popup-content text-field';
-            } else if (fieldType === 'list') {
-                content.className = 'popup-content dropdown-field';
-            }
-            
-            return t.get('card', 'shared', fieldId, '').then(function(currentValue) {
-                let editorHtml = `<h3>V5 - ${fieldName}</h3>`;
-                
-                if (fieldType === 'text') {
-                    editorHtml += `
-                        <label for="field-input">${fieldName}:</label>
-                        <textarea id="field-input" class="wide-textarea" rows="8" placeholder="Enter ${fieldName.toLowerCase()}...">${currentValue}</textarea>
-                    `;
-                } else if (fieldType === 'list') {
-                    const fieldDef = FIELD_DEFINITIONS[fieldId];
-                    if (fieldDef && fieldDef.options) {
-                        let optionsHtml = '<option value="">Select option...</option>';
-                        fieldDef.options.forEach(function(option) {
-                            const selected = option === currentValue ? 'selected' : '';
-                            optionsHtml += `<option value="${option}" ${selected}>${option}</option>`;
-                        });
-                        
-                        editorHtml += `
-                            <label for="field-input">${fieldName}:</label>
-                            <select id="field-input">${optionsHtml}</select>
-                        `;
-                    }
-                }
-                
-                document.getElementById('field-editor').innerHTML = editorHtml;
-                
-                document.getElementById('save-btn').addEventListener('click', saveField);
-                document.getElementById('cancel-btn').addEventListener('click', cancelEdit);
-                
-                setTimeout(function() {
-                    const input = document.getElementById('field-input');
-                    if (input) {
-                        input.focus();
-                        if (input.tagName === 'TEXTAREA') {
-                            input.setSelectionRange(input.value.length, input.value.length);
-                        }
-                    }
-                }, 100);
-                
-            }).catch(function(error) {
-                console.error('[V5 Edit] Error:', error);
-                document.getElementById('field-editor').innerHTML = `
-                    <div class="message error">
-                        V5 Error loading field: ${error.message}
-                    </div>
-                `;
+        // Get editor div
+        const editorDiv = document.getElementById('editor');
+        
+        // Create input based on field type
+        let inputElement;
+        if (fieldType === 'text') {
+            inputElement = document.createElement('textarea');
+            inputElement.id = 'fieldValue';
+        } else if (fieldType === 'list') {
+            inputElement = document.createElement('select');
+            inputElement.id = 'fieldValue';
+            // Add options for buffer-approach
+            const options = [
+                { value: 'property-center-to-property-center', text: 'Property Center to Property Center' },
+                { value: 'parcel-to-parcel', text: 'Parcel to Parcel' },
+                { value: 'natural-path', text: 'Natural Path' },
+                { value: 'other-approach', text: 'Other Approach' },
+                { value: 'not-applicable', text: 'Not Applicable' }
+            ];
+            options.forEach(opt => {
+                const option = document.createElement('option');
+                option.value = opt.value;
+                option.text = opt.text;
+                inputElement.appendChild(option);
             });
+        }
+        
+        // Load current value
+        t.get('card', 'shared', fieldId, '').then(value => {
+            inputElement.value = value;
+            editorDiv.appendChild(inputElement);
         });
         
-        function saveField() {
-            const input = document.getElementById('field-input');
-            let value = '';
-            
-            if (fieldType === 'text') {
-                value = input.value.trim();
-            } else if (fieldType === 'list') {
-                value = input.value;
-            }
-            
-            console.log('[V5 Edit] Saving WIDE field:', fieldName, '=', value);
-            
-            t.set('card', 'shared', fieldId, value).then(function() {
-                console.log('[V5 Edit] Wide field saved successfully');
-                t.closePopup();
-            }).catch(function(error) {
-                console.error('[V5 Edit] Error saving wide field:', error);
-                alert('Error saving: ' + error.message);
-            });
-        }
+        // Save button
+        document.getElementById('save').addEventListener('click', () => {
+            const value = document.getElementById('fieldValue').value;
+            t.set('card', 'shared', fieldId, value)
+                .then(() => t.closePopup());
+        });
         
-        function cancelEdit() {
+        // Cancel button
+        document.getElementById('cancel').addEventListener('click', () => {
             t.closePopup();
-        }
+        });
     </script>
 </body>
 </html>
