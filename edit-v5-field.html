@@ -43,6 +43,18 @@
             cursor: pointer;
             font-size: 14px;
         }
+        .doc-link {
+            text-align: center;
+            margin-top: 10px;
+        }
+        .doc-link a {
+            font-size: 14px;
+            color: #1a73e8;
+            text-decoration: none;
+        }
+        .doc-link a:hover {
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
@@ -51,6 +63,9 @@
         <div class="button-container">
             <button id="save">Save</button>
             <button id="cancel">Cancel</button>
+        </div>
+        <div class="doc-link" id="docLink" style="display: none;">
+            <a href="https://docs.google.com/document/d/1Gd47aCyoOOmjra49dSeDzbf8kTXiUNLEGBgSDD8OhM8/edit?usp=sharing" target="_blank">Online documentation</a>
         </div>
     </div>
 
@@ -67,6 +82,11 @@
         
         // Get editor div
         const editorDiv = document.getElementById('editor');
+        
+        // Show documentation link only for buffers field
+        if (fieldId === 'buffers') {
+            document.getElementById('docLink').style.display = 'block';
+        }
         
         // Create input based on field type
         let inputElement;
