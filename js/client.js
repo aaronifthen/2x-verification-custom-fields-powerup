@@ -1,11 +1,8 @@
-/* global TrelloPowerUp */ 
+/* global TrelloPowerUp */
 
-// IMPORTANT: Replace with your actual Trello API key from https://trello.com/power-ups/admin
-const API_KEY = '301da7855ed6ae5810670bb9ea548f8e';
-const APP_NAME = 'power-up-2x-verification-custom-fields';
-var VERSION = '8.8';
+var VERSION = '9.1';
 
-// Power-Up storage fields (7 fields)
+// Power-Up storage fields (7 fields - up to 4K chars each)
 var POWERUP_FIELDS = [
   { id: 'buffers', name: 'Buffers', type: 'text' },
   { id: 'buffer-approach', name: 'Buffer Approach', type: 'list', options: [
@@ -22,17 +19,17 @@ var POWERUP_FIELDS = [
   { id: 'pending-dispensaries', name: 'Pending Dispensaries', type: 'text' }
 ];
 
-// Native Trello custom field names (2 overflow fields)
+// Native custom field names (2 overflow fields - up to 16K chars, READ-ONLY from Power-Up)
 var NATIVE_FIELD_NAMES = [
   'Overflow Active Disp',
   'Overflow Pending Disp'
 ];
 
-console.log('[Custom Fields] VERSION 8.8 STARTING');
+console.log('[Custom Fields] VERSION 9.1 - Native fields display only');
 
 TrelloPowerUp.initialize({
   'card-detail-badges': function(t, options) {
-    console.log('[Custom Fields] Loading badges V8.8');
+    console.log('[Custom Fields] Loading badges V9.1');
     
     return Promise.all([
       Promise.all(POWERUP_FIELDS.map(function(field) {
@@ -61,10 +58,7 @@ TrelloPowerUp.initialize({
       
       var badges = [];
       
-      console.log('[Custom Fields] PowerUp fields:', powerUpData.length);
-      console.log('[Custom Fields] Board custom fields:', boardCustomFields.length);
-      
-      // Add Power-Up storage field badges
+      // Add Power-Up storage field badges (editable via Power-Up)
       powerUpData.forEach(function(data) {
         var field = data.field;
         var value = data.value;
@@ -88,12 +82,11 @@ TrelloPowerUp.initialize({
         });
       });
       
-      // Add native custom field badges
+      // Add native custom field badges (display only - edit via Trello's Custom Fields)
       NATIVE_FIELD_NAMES.forEach(function(fieldName) {
         try {
           var fieldDef = null;
           
-          // Safely find field definition
           if (boardCustomFields && boardCustomFields.length > 0) {
             for (var i = 0; i < boardCustomFields.length; i++) {
               if (boardCustomFields[i].name === fieldName) {
@@ -106,7 +99,6 @@ TrelloPowerUp.initialize({
           if (fieldDef) {
             var fieldItem = null;
             
-            // Safely find field value
             if (cardCustomFields && cardCustomFields.length > 0) {
               for (var j = 0; j < cardCustomFields.length; j++) {
                 if (cardCustomFields[j].idCustomField === fieldDef.id) {
@@ -116,38 +108,39 @@ TrelloPowerUp.initialize({
               }
             }
             
-            var displayValue = '(click to add)';
+            var displayValue = '(not set - edit below)';
             var badgeColor = 'light-gray';
             
             if (fieldItem && fieldItem.value && fieldItem.value.text) {
-              displayValue = fieldItem.value.text;
+              var text = fieldItem.value.text;
+              // Show first 50 chars as preview
+              displayValue = text.length > 50 ? text.substring(0, 50) + '...' : text;
               badgeColor = 'purple';
             }
             
             badges.push({
-              title: fieldName,
+              title: fieldName + ' (16K)',
               text: displayValue,
               color: badgeColor,
               callback: function(t) {
-                return t.popup({
-                  title: 'Edit ' + fieldName,
-                  url: './edit-native-field.html?fieldId=' + fieldDef.id + '&fieldName=' + encodeURIComponent(fieldName) + '&fieldType=' + fieldDef.type + '&apiKey=' + API_KEY + '&v=' + VERSION + '&cache=' + Date.now(),
-                  height: 400,
-                  width: 450
+                return t.alert({
+                  message: 'This field supports up to 16K characters.\n\nTo edit, scroll down to "Custom Fields" section below and click on "' + fieldName + '".',
+                  duration: 10,
+                  display: 'info'
                 });
               }
             });
             
-            console.log('[Custom Fields] Added native field badge:', fieldName);
+            console.log('[Custom Fields] Added native field badge (read-only):', fieldName);
           } else {
             console.warn('[Custom Fields] Native field not found:', fieldName);
             badges.push({
               title: fieldName,
-              text: 'Field not found',
+              text: 'Create in Custom Fields below',
               color: 'red',
               callback: function(t) {
                 return t.alert({
-                  message: 'Create a text field named "' + fieldName + '" in Trello Custom Fields',
+                  message: 'Create a text field named "' + fieldName + '" using Trello\'s Custom Fields Power-Up.',
                   duration: 8
                 });
               }
@@ -158,15 +151,14 @@ TrelloPowerUp.initialize({
         }
       });
       
-      console.log('[Custom Fields] Returning badges:', badges.length);
+      console.log('[Custom Fields] Returning', badges.length, 'badges');
       return badges;
       
     }).catch(function(error) {
-      console.error('[Custom Fields] Fatal error in card-detail-badges:', error);
-      console.error('[Custom Fields] Error stack:', error.stack);
+      console.error('[Custom Fields] Error:', error);
       return [{
         title: 'Error',
-        text: 'Failed to load',
+        text: error.message,
         color: 'red'
       }];
     });
@@ -179,9 +171,6 @@ TrelloPowerUp.initialize({
       height: 500
     });
   }
-}, {
-  appKey: API_KEY,
-  appName: APP_NAME
 });
 
-console.log('[Custom Fields] VERSION 8.8 INITIALIZED');
+console.log('[Custom Fields] VERSION 9.1 INITIALIZED');
