@@ -1,5 +1,5 @@
 /* global TrelloPowerUp */   
-
+  
 console.log('[Custom Fields] *** VERSION 8 - 7 POWER-UP + 2 NATIVE FIELDS ***');
 
 // Power-Up storage fields (7 fields)
