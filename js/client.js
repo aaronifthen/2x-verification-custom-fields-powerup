@@ -1,5 +1,5 @@
 /* global TrelloPowerUp */
- 
+
 console.log('[Custom Fields] *** VERSION 8.6 - WITH API KEY SUPPORT ***');
 
 // IMPORTANT: Replace with your actual Trello API key from https://trello.com/power-ups/admin
@@ -35,7 +35,7 @@ const VERSION = '8.6';
 // Initialize the Power-Up WITH API KEY
 TrelloPowerUp.initialize({
   'card-detail-badges': function(t, options) {
-    console.log('[Custom Fields] *** V8.6 WITH API KEY ***');
+    console.log('[Custom Fields] V8.6 WITH API KEY');
     console.log('[Custom Fields] API Key configured:', API_KEY !== 'YOUR_API_KEY_HERE');
     
     return Promise.all([
@@ -135,7 +135,7 @@ TrelloPowerUp.initialize({
         }
       });
       
-      console.log('[Custom Fields] *** V8.6 RETURNING', badges.length, 'TOTAL BADGES ***');
+      console.log('[Custom Fields] V8.6 RETURNING', badges.length, 'TOTAL BADGES');
       return badges;
       
     }).catch(function(error) {
@@ -161,4 +161,4 @@ TrelloPowerUp.initialize({
   appName: APP_NAME
 });
 
-console.log('[Custom Fields] *** VERSION 8.6 COMPLETE - API KEY:', API_KEY !== 'YOUR_API_KEY_HERE' ? 'CONFIGURED' : 'NOT CONFIGURED' ***');
+console.log('[Custom Fields] VERSION 8.6 COMPLETE - API KEY:', API_KEY !== 'YOUR_API_KEY_HERE' ? 'CONFIGURED' : 'NOT CONFIGURED');
