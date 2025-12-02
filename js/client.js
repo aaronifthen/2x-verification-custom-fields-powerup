@@ -113,8 +113,9 @@ TrelloPowerUp.initialize({
             
             if (fieldItem && fieldItem.value && fieldItem.value.text) {
               var text = fieldItem.value.text;
-              // Show first 50 chars as preview
-              displayValue = text.length > 50 ? text.substring(0, 50) + '...' : text;
+              var charCount = text.length;
+              // Show character count instead of content preview
+              displayValue = charCount.toLocaleString() + ' chars';
               badgeColor = 'purple';
             }
             
@@ -123,10 +124,11 @@ TrelloPowerUp.initialize({
               text: displayValue,
               color: badgeColor,
               callback: function(t) {
-                return t.alert({
-                  message: 'This field supports up to 16K characters.\n\nTo edit, scroll down to "Custom Fields" section below and click on "' + fieldName + '".',
-                  duration: 10,
-                  display: 'info'
+                return t.popup({
+                  title: 'View ' + fieldName,
+                  url: './view-native-field.html?fieldId=' + fieldDef.id + '&fieldName=' + encodeURIComponent(fieldName) + '&v=' + VERSION,
+                  height: 600,
+                  width: 800
                 });
               }
             });
