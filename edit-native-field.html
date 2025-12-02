@@ -104,26 +104,22 @@
     
     <script src="https://p.trellocdn.com/power-up.min.js"></script>
     <script>
-        const urlParams = new URLSearchParams(window.location.search);
-        const fieldId = urlParams.get('fieldId');
-        const fieldName = urlParams.get('fieldName');
-        const fieldType = urlParams.get('fieldType');
-        const apiKey = urlParams.get('apiKey');
+        var urlParams = new URLSearchParams(window.location.search);
+        var fieldId = urlParams.get('fieldId');
+        var fieldName = urlParams.get('fieldName');
+        var fieldType = urlParams.get('fieldType');
+        var apiKey = urlParams.get('apiKey');
         
-        // Initialize with API key passed from parent
-        const t = TrelloPowerUp.iframe({
-            appKey: apiKey,
-            appName: 'Custom Fields Power-Up'
-        });
+        var t = TrelloPowerUp.iframe();
+        var MAX_CHARS = 16384;
         
-        const MAX_CHARS = 16384;
-        
-        let fieldDefinition = null;
-        let cardId = null;
+        var fieldDefinition = null;
+        var cardId = null;
+        var token = null;
         
         function debugLog(msg) {
             console.log(msg);
-            const debugDiv = document.getElementById('debug-info');
+            var debugDiv = document.getElementById('debug-info');
             if (debugDiv) {
                 debugDiv.textContent += msg + '\n';
                 debugDiv.scrollTop = debugDiv.scrollHeight;
@@ -131,57 +127,59 @@
         }
         
         t.render(function() {
-            debugLog('[Native Field] === INITIALIZATION START ===');
-            debugLog('[Native Field] Field Name: ' + fieldName);
+            debugLog('[Native Field] INITIALIZATION START');
+            debugLog('[Native Field] Field: ' + fieldName);
             debugLog('[Native Field] Field ID: ' + fieldId);
             debugLog('[Native Field] API Key present: ' + (apiKey ? 'Yes' : 'No'));
             
             return Promise.all([
                 t.card('id'),
                 t.card('customFieldItems'),
-                t.board('customFields')
+                t.board('customFields'),
+                t.getContext()
             ]).then(function(results) {
                 cardId = results[0].id;
-                const card = results[1];
-                const board = results[2];
+                var card = results[1];
+                var board = results[2];
+                var context = results[3];
                 
                 debugLog('[Native Field] Card ID: ' + cardId);
+                debugLog('[Native Field] Member: ' + context.member);
                 
-                // Find field definition
-                fieldDefinition = board.customFields.find(f => f.id === fieldId);
+                fieldDefinition = board.customFields.find(function(f) {
+                    return f.id === fieldId;
+                });
+                
                 if (!fieldDefinition) {
                     throw new Error('Field not found: ' + fieldName);
                 }
                 
-                debugLog('[Native Field] Field found: ' + fieldDefinition.name);
+                debugLog('[Native Field] Field found');
                 
-                // Find current value
-                const fieldItem = card.customFieldItems.find(f => f.idCustomField === fieldId);
-                let currentValue = '';
+                var fieldItem = card.customFieldItems.find(function(f) {
+                    return f.idCustomField === fieldId;
+                });
+                
+                var currentValue = '';
                 
                 if (fieldItem && fieldItem.value && fieldItem.value.text) {
                     currentValue = fieldItem.value.text;
                     debugLog('[Native Field] Current value: ' + currentValue.length + ' chars');
                 }
                 
-                // Create editor
-                let editorHtml = `<h3>${fieldName}</h3>`;
-                
-                editorHtml += `
-                    <label for="field-input">${fieldName}:</label>
-                    <textarea id="field-input" rows="8" placeholder="Enter ${fieldName.toLowerCase()}... (supports up to 16K characters)">${currentValue}</textarea>
-                    <div id="char-count" class="char-count">0 / ${MAX_CHARS.toLocaleString()} characters</div>
-                `;
+                var editorHtml = '<h3>' + fieldName + '</h3>';
+                editorHtml += '<label for="field-input">' + fieldName + ':</label>';
+                editorHtml += '<textarea id="field-input" rows="8" placeholder="Enter ' + fieldName.toLowerCase() + '... (supports up to 16K characters)">' + currentValue + '</textarea>';
+                editorHtml += '<div id="char-count" class="char-count">0 / 16,384 characters</div>';
                 
                 document.getElementById('field-editor').innerHTML = editorHtml;
                 
-                // Setup character counter
-                const input = document.getElementById('field-input');
-                const charCount = document.getElementById('char-count');
+                var input = document.getElementById('field-input');
+                var charCount = document.getElementById('char-count');
                 
                 function updateCharCount() {
-                    const length = input.value.length;
-                    charCount.textContent = `${length.toLocaleString()} / ${MAX_CHARS.toLocaleString()} characters`;
+                    var length = input.value.length;
+                    charCount.textContent = length.toLocaleString() + ' / 16,384 characters';
                     
                     if (length > MAX_CHARS) {
                         charCount.className = 'char-count error';
@@ -195,12 +193,10 @@
                 input.addEventListener('input', updateCharCount);
                 updateCharCount();
                 
-                // Event listeners
                 document.getElementById('save-btn').addEventListener('click', saveField);
                 document.getElementById('cancel-btn').addEventListener('click', cancelEdit);
                 document.getElementById('clear-btn').addEventListener('click', clearField);
                 
-                // Focus the input
                 setTimeout(function() {
                     if (input) {
                         input.focus();
@@ -208,24 +204,20 @@
                     }
                 }, 100);
                 
-                debugLog('[Native Field] === INITIALIZATION COMPLETE ===');
+                debugLog('[Native Field] INITIALIZATION COMPLETE');
                 
             }).catch(function(error) {
                 debugLog('[Native Field] ERROR: ' + error.message);
-                document.getElementById('field-editor').innerHTML = `
-                    <div class="message error">
-                        Error loading field: ${error.message}
-                    </div>
-                `;
+                document.getElementById('field-editor').innerHTML = '<div class="message error">Error loading field: ' + error.message + '</div>';
             });
         });
         
         function saveField() {
-            const input = document.getElementById('field-input');
-            const value = input.value;
+            var input = document.getElementById('field-input');
+            var value = input.value;
             
             if (value.length > MAX_CHARS) {
-                alert(`Content is too long! Maximum ${MAX_CHARS.toLocaleString()} characters allowed. Current: ${value.length.toLocaleString()}`);
+                alert('Content is too long! Maximum 16,384 characters allowed. Current: ' + value.length.toLocaleString());
                 return;
             }
             
@@ -234,85 +226,121 @@
                 return;
             }
             
-            debugLog('[Native Field] === SAVE OPERATION START ===');
+            debugLog('[Native Field] SAVE START');
             debugLog('[Native Field] Value length: ' + value.length + ' chars');
             
-            // Disable save button
-            const saveBtn = document.getElementById('save-btn');
-            const originalText = saveBtn.textContent;
+            var saveBtn = document.getElementById('save-btn');
+            var originalText = saveBtn.textContent;
             saveBtn.disabled = true;
             saveBtn.textContent = 'Saving...';
             
-            debugLog('[Native Field] Getting REST API access...');
+            debugLog('[Native Field] Authorizing with Trello...');
             
-            t.getRestApi()
-                .then(function(api) {
-                    debugLog('[Native Field] ✓ REST API obtained');
-                    
-                    const endpoint = 'cards/' + cardId + '/customField/' + fieldId + '/item';
-                    debugLog('[Native Field] Endpoint: ' + endpoint);
-                    
-                    const payload = {
-                        value: {
-                            text: value
-                        }
-                    };
-                    
-                    debugLog('[Native Field] Calling API...');
-                    
-                    return api.rest('PUT', endpoint, payload);
-                })
-                .then(function(response) {
-                    debugLog('[Native Field] ✓✓✓ SAVE SUCCESSFUL! ✓✓✓');
-                    debugLog('[Native Field] Response: ' + JSON.stringify(response));
-                    
-                    setTimeout(function() {
-                        t.closePopup();
-                    }, 500);
-                })
-                .catch(function(error) {
-                    debugLog('[Native Field] ✗✗✗ SAVE FAILED ✗✗✗');
-                    debugLog('[Native Field] Error: ' + error.message);
-                    debugLog('[Native Field] Error details: ' + JSON.stringify(error));
-                    
-                    saveBtn.disabled = false;
-                    saveBtn.textContent = originalText;
-                    
-                    alert('Error saving field: ' + error.message + '\n\nSee debug info below for details.');
+            // Use token authorization instead of getRestApi
+            t.authorize({
+                name: 'Custom Fields Power-Up',
+                scope: {
+                    read: true,
+                    write: true
+                },
+                expiration: 'never'
+            }).then(function(authToken) {
+                debugLog('[Native Field] Got authorization token');
+                token = authToken;
+                
+                var url = 'https://api.trello.com/1/cards/' + cardId + '/customField/' + fieldId + '/item';
+                debugLog('[Native Field] URL: ' + url);
+                
+                var params = {
+                    key: apiKey,
+                    token: token,
+                    value: JSON.stringify({ text: value })
+                };
+                
+                var queryString = Object.keys(params).map(function(key) {
+                    return encodeURIComponent(key) + '=' + encodeURIComponent(params[key]);
+                }).join('&');
+                
+                debugLog('[Native Field] Making PUT request...');
+                
+                return fetch(url + '?' + queryString, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
                 });
+            }).then(function(response) {
+                debugLog('[Native Field] Response status: ' + response.status);
+                
+                if (!response.ok) {
+                    return response.text().then(function(text) {
+                        throw new Error('API error: ' + response.status + ' - ' + text);
+                    });
+                }
+                
+                return response.json();
+            }).then(function(data) {
+                debugLog('[Native Field] SAVE SUCCESSFUL!');
+                debugLog('[Native Field] Response: ' + JSON.stringify(data));
+                
+                setTimeout(function() {
+                    t.closePopup();
+                }, 500);
+            }).catch(function(error) {
+                debugLog('[Native Field] SAVE FAILED');
+                debugLog('[Native Field] Error: ' + error.message);
+                
+                saveBtn.disabled = false;
+                saveBtn.textContent = originalText;
+                
+                alert('Error saving field: ' + error.message + '\n\nSee debug info below for details.');
+            });
         }
         
         function clearField() {
             if (confirm('Are you sure you want to clear this field?')) {
-                debugLog('[Native Field] === CLEAR OPERATION START ===');
+                debugLog('[Native Field] CLEAR START');
                 
-                const clearBtn = document.getElementById('clear-btn');
+                var clearBtn = document.getElementById('clear-btn');
                 clearBtn.disabled = true;
                 clearBtn.textContent = 'Clearing...';
                 
-                t.getRestApi()
-                    .then(function(api) {
-                        return api.rest('PUT', 'cards/' + cardId + '/customField/' + fieldId + '/item', {
-                            value: { text: '' }
-                        });
-                    })
-                    .then(function() {
-                        debugLog('[Native Field] ✓ Clear successful');
-                        setTimeout(function() {
-                            t.closePopup();
-                        }, 300);
-                    })
-                    .catch(function(error) {
-                        debugLog('[Native Field] ✗ Clear failed: ' + error.message);
-                        clearBtn.disabled = false;
-                        clearBtn.textContent = 'Clear';
-                        alert('Error clearing field: ' + error.message);
-                    });
+                t.authorize({
+                    name: 'Custom Fields Power-Up',
+                    scope: { read: true, write: true },
+                    expiration: 'never'
+                }).then(function(authToken) {
+                    var url = 'https://api.trello.com/1/cards/' + cardId + '/customField/' + fieldId + '/item';
+                    var params = {
+                        key: apiKey,
+                        token: authToken,
+                        value: JSON.stringify({ text: '' })
+                    };
+                    
+                    var queryString = Object.keys(params).map(function(key) {
+                        return encodeURIComponent(key) + '=' + encodeURIComponent(params[key]);
+                    }).join('&');
+                    
+                    return fetch(url + '?' + queryString, { method: 'PUT' });
+                }).then(function(response) {
+                    if (!response.ok) {
+                        throw new Error('Clear failed: ' + response.status);
+                    }
+                    debugLog('[Native Field] CLEAR SUCCESSFUL');
+                    setTimeout(function() {
+                        t.closePopup();
+                    }, 300);
+                }).catch(function(error) {
+                    debugLog('[Native Field] CLEAR FAILED: ' + error.message);
+                    clearBtn.disabled = false;
+                    clearBtn.textContent = 'Clear';
+                    alert('Error clearing field: ' + error.message);
+                });
             }
         }
         
         function cancelEdit() {
-            debugLog('[Native Field] Edit cancelled');
+            debugLog('[Native Field] Cancelled');
             t.closePopup();
         }
     </script>
