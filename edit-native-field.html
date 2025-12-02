@@ -75,6 +75,18 @@
             color: #eb5a46;
             font-weight: bold;
         }
+        
+        .debug-info {
+            margin-top: 15px;
+            padding: 10px;
+            background: #f4f5f7;
+            border-radius: 4px;
+            font-size: 11px;
+            font-family: monospace;
+            color: #5e6c84;
+            max-height: 200px;
+            overflow-y: auto;
+        }
     </style>
 </head>
 <body>
@@ -87,22 +99,20 @@
             <button id="cancel-btn">Cancel</button>
             <button id="clear-btn" class="danger">Clear</button>
         </div>
+        <div id="debug-info" class="debug-info"></div>
     </div>
     
     <script src="https://p.trellocdn.com/power-up.min.js"></script>
     <script>
-        // IMPORTANT: Replace YOUR_API_KEY_HERE with your actual Trello API key
-        // Get it from: https://trello.com/power-ups/admin
-        const API_KEY = '301da7855ed6ae5810670bb9ea548f8e';
-        
         const urlParams = new URLSearchParams(window.location.search);
         const fieldId = urlParams.get('fieldId');
         const fieldName = urlParams.get('fieldName');
         const fieldType = urlParams.get('fieldType');
+        const apiKey = urlParams.get('apiKey');
         
-        // Initialize with API key for REST API access
+        // Initialize with API key passed from parent
         const t = TrelloPowerUp.iframe({
-            appKey: API_KEY,
+            appKey: apiKey,
             appName: 'Custom Fields Power-Up'
         });
         
@@ -111,8 +121,20 @@
         let fieldDefinition = null;
         let cardId = null;
         
+        function debugLog(msg) {
+            console.log(msg);
+            const debugDiv = document.getElementById('debug-info');
+            if (debugDiv) {
+                debugDiv.textContent += msg + '\n';
+                debugDiv.scrollTop = debugDiv.scrollHeight;
+            }
+        }
+        
         t.render(function() {
-            console.log('[Native Field] Loading editor with API key for:', fieldName);
+            debugLog('[Native Field] === INITIALIZATION START ===');
+            debugLog('[Native Field] Field Name: ' + fieldName);
+            debugLog('[Native Field] Field ID: ' + fieldId);
+            debugLog('[Native Field] API Key present: ' + (apiKey ? 'Yes' : 'No'));
             
             return Promise.all([
                 t.card('id'),
@@ -123,8 +145,7 @@
                 const card = results[1];
                 const board = results[2];
                 
-                console.log('[Native Field] Card ID:', cardId);
-                console.log('[Native Field] API Key configured:', API_KEY !== 'YOUR_API_KEY_HERE');
+                debugLog('[Native Field] Card ID: ' + cardId);
                 
                 // Find field definition
                 fieldDefinition = board.customFields.find(f => f.id === fieldId);
@@ -132,7 +153,7 @@
                     throw new Error('Field not found: ' + fieldName);
                 }
                 
-                console.log('[Native Field] Field definition found');
+                debugLog('[Native Field] Field found: ' + fieldDefinition.name);
                 
                 // Find current value
                 const fieldItem = card.customFieldItems.find(f => f.idCustomField === fieldId);
@@ -140,7 +161,7 @@
                 
                 if (fieldItem && fieldItem.value && fieldItem.value.text) {
                     currentValue = fieldItem.value.text;
-                    console.log('[Native Field] Current value length:', currentValue.length, 'chars');
+                    debugLog('[Native Field] Current value: ' + currentValue.length + ' chars');
                 }
                 
                 // Create editor
@@ -187,8 +208,10 @@
                     }
                 }, 100);
                 
+                debugLog('[Native Field] === INITIALIZATION COMPLETE ===');
+                
             }).catch(function(error) {
-                console.error('[Native Field] Error loading:', error);
+                debugLog('[Native Field] ERROR: ' + error.message);
                 document.getElementById('field-editor').innerHTML = `
                     <div class="message error">
                         Error loading field: ${error.message}
@@ -206,12 +229,13 @@
                 return;
             }
             
-            if (API_KEY === 'YOUR_API_KEY_HERE') {
-                alert('API Key not configured! Please update edit-native-field.html with your Trello API key.\n\nGet it from: https://trello.com/power-ups/admin');
+            if (!apiKey) {
+                alert('API Key not configured! Please update client.js with your Trello API key.');
                 return;
             }
             
-            console.log('[Native Field] Saving:', fieldName, 'Length:', value.length, 'chars');
+            debugLog('[Native Field] === SAVE OPERATION START ===');
+            debugLog('[Native Field] Value length: ' + value.length + ' chars');
             
             // Disable save button
             const saveBtn = document.getElementById('save-btn');
@@ -219,41 +243,48 @@
             saveBtn.disabled = true;
             saveBtn.textContent = 'Saving...';
             
-            // Use REST API to save
+            debugLog('[Native Field] Getting REST API access...');
+            
             t.getRestApi()
                 .then(function(api) {
-                    console.log('[Native Field] REST API obtained');
+                    debugLog('[Native Field] ✓ REST API obtained');
                     
                     const endpoint = 'cards/' + cardId + '/customField/' + fieldId + '/item';
+                    debugLog('[Native Field] Endpoint: ' + endpoint);
+                    
                     const payload = {
                         value: {
                             text: value
                         }
                     };
                     
-                    console.log('[Native Field] PUT', endpoint, payload);
+                    debugLog('[Native Field] Calling API...');
                     
                     return api.rest('PUT', endpoint, payload);
                 })
                 .then(function(response) {
-                    console.log('[Native Field] ✓ Save successful!', response);
+                    debugLog('[Native Field] ✓✓✓ SAVE SUCCESSFUL! ✓✓✓');
+                    debugLog('[Native Field] Response: ' + JSON.stringify(response));
+                    
                     setTimeout(function() {
                         t.closePopup();
-                    }, 300);
+                    }, 500);
                 })
                 .catch(function(error) {
-                    console.error('[Native Field] ✗ Save failed:', error);
+                    debugLog('[Native Field] ✗✗✗ SAVE FAILED ✗✗✗');
+                    debugLog('[Native Field] Error: ' + error.message);
+                    debugLog('[Native Field] Error details: ' + JSON.stringify(error));
                     
                     saveBtn.disabled = false;
                     saveBtn.textContent = originalText;
                     
-                    alert('Error saving field: ' + error.message + '\n\nCheck console (F12) for details.');
+                    alert('Error saving field: ' + error.message + '\n\nSee debug info below for details.');
                 });
         }
         
         function clearField() {
             if (confirm('Are you sure you want to clear this field?')) {
-                console.log('[Native Field] Clearing field:', fieldName);
+                debugLog('[Native Field] === CLEAR OPERATION START ===');
                 
                 const clearBtn = document.getElementById('clear-btn');
                 clearBtn.disabled = true;
@@ -266,13 +297,13 @@
                         });
                     })
                     .then(function() {
-                        console.log('[Native Field] ✓ Clear successful');
+                        debugLog('[Native Field] ✓ Clear successful');
                         setTimeout(function() {
                             t.closePopup();
                         }, 300);
                     })
                     .catch(function(error) {
-                        console.error('[Native Field] ✗ Clear failed:', error);
+                        debugLog('[Native Field] ✗ Clear failed: ' + error.message);
                         clearBtn.disabled = false;
                         clearBtn.textContent = 'Clear';
                         alert('Error clearing field: ' + error.message);
@@ -281,7 +312,7 @@
         }
         
         function cancelEdit() {
-            console.log('[Native Field] Edit cancelled');
+            debugLog('[Native Field] Edit cancelled');
             t.closePopup();
         }
     </script>
