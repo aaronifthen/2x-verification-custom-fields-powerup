@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Edit Native Field</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        #field-input {
+            width: 100%;
+            font-size: 14px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.4;
+            box-sizing: border-box;
+        }
+        
+        textarea#field-input {
+            max-width: 580px;
+            min-height: 180px;
+            padding: 12px;
+            resize: vertical;
+        }
+        
+        .popup-content {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 20px;
+            max-width: 650px;
+        }
+        
+        #content {
+            width: 100%;
+            box-sizing: border-box;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+        
+        .buttons {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+        
+        h3 {
+            margin-top: 0;
+            color: #172b4d;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #172b4d;
+        }
+    </style>
+</head>
+<body>
+    <div id="content" class="popup-content">
+        <div id="field-editor">
+            <p>Loading field editor...</p>
+        </div>
+        <div class="buttons">
+            <button id="save-btn" class="primary">Save</button>
+            <button id="cancel-btn">Cancel</button>
+            <button id="clear-btn" class="danger">Clear</button>
+        </div>
+    </div>
+    
+    <script src="https://p.trellocdn.com/power-up.min.js"></script>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const fieldId = urlParams.get('fieldId');
+        const fieldName = urlParams.get('fieldName');
+        const fieldType = urlParams.get('fieldType');
+        
+        const t = TrelloPowerUp.iframe();
+        
+        let fieldDefinition = null;
+        
+        t.render(function() {
+            console.log('[Native Field] Loading editor for:', fieldName, fieldType);
+            
+            return Promise.all([
+                t.card('customFieldItems'),
+                t.board('customFields')
+            ]).then(function(results) {
+                const card = results[0];
+                const board = results[1];
+                
+                // Find field definition
+                fieldDefinition = board.customFields.find(f => f.id === fieldId);
+                if (!fieldDefinition) {
+                    throw new Error('Field not found: ' + fieldName);
+                }
+                
+                // Find current value
+                const fieldItem = card.customFieldItems.find(f => f.idCustomField === fieldId);
+                let currentValue = '';
+                
+                if (fieldItem && fieldItem.value && fieldItem.value.text) {
+                    currentValue = fieldItem.value.text;
+                }
+                
+                // Create editor
+                let editorHtml = `<h3>${fieldName}</h3>`;
+                
+                editorHtml += `
+                    <label for="field-input">${fieldName}:</label>
+                    <textarea id="field-input" rows="8" placeholder="Enter ${fieldName.toLowerCase()}...">${currentValue}</textarea>
+                `;
+                
+                document.getElementById('field-editor').innerHTML = editorHtml;
+                
+                // Event listeners
+                document.getElementById('save-btn').addEventListener('click', saveField);
+                document.getElementById('cancel-btn').addEventListener('click', cancelEdit);
+                document.getElementById('clear-btn').addEventListener('click', clearField);
+                
+                // Focus the input
+                setTimeout(function() {
+                    const input = document.getElementById('field-input');
+                    if (input) {
+                        input.focus();
+                        input.setSelectionRange(input.value.length, input.value.length);
+                    }
+                }, 100);
+                
+            }).catch(function(error) {
+                console.error('[Native Field] Error:', error);
+                document.getElementById('field-editor').innerHTML = `
+                    <div class="message error">
+                        Error loading field: ${error.message}
+                    </div>
+                `;
+            });
+        });
+        
+        function saveField() {
+            const input = document.getElementById('field-input');
+            const value = input.value.trim();
+            
+            console.log('[Native Field] Saving:', fieldName, '=', value);
+            
+            // Save to Trello's native custom field
+            const fieldValue = { text: value };
+            
+            t.card('customFieldItems', fieldValue, fieldId).then(function() {
+                console.log('[Native Field] Saved successfully');
+                t.closePopup();
+            }).catch(function(error) {
+                console.error('[Native Field] Error saving:', error);
+                alert('Error saving: ' + error.message);
+            });
+        }
+        
+        function clearField() {
+            if (confirm('Are you sure you want to clear this field?')) {
+                console.log('[Native Field] Clearing field:', fieldName);
+                
+                t.card('customFieldItems', {}, fieldId).then(function() {
+                    console.log('[Native Field] Field cleared successfully');
+                    t.closePopup();
+                }).catch(function(error) {
+                    console.error('[Native Field] Error clearing:', error);
+                    alert('Error clearing field: ' + error.message);
+                });
+            }
+        }
+        
+        function cancelEdit() {
+            t.closePopup();
+        }
+    </script>
+</body>
+</html>
