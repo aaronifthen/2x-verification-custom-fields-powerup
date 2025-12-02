@@ -1,4 +1,4 @@
-/* global TrelloPowerUp */
+/* global TrelloPowerUp */  
 
 // IMPORTANT: Replace with your actual Trello API key from https://trello.com/power-ups/admin
 const API_KEY = '301da7855ed6ae5810670bb9ea548f8e';
