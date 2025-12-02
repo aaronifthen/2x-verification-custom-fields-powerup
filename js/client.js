@@ -1,6 +1,10 @@
-/* global TrelloPowerUp */   
-  
-console.log('[Custom Fields] *** VERSION 8 - 7 POWER-UP + 2 NATIVE FIELDS ***');
+/* global TrelloPowerUp */
+
+console.log('[Custom Fields] *** VERSION 8.6 - WITH API KEY SUPPORT ***');
+
+// IMPORTANT: Replace with your actual Trello API key from https://trello.com/power-ups/admin
+const API_KEY = '301da7855ed6ae5810670bb9ea548f8e';
+const APP_NAME = 'power-up-2x-verification-custom-fields';
 
 // Power-Up storage fields (7 fields)
 const POWERUP_FIELDS = [
@@ -25,10 +29,14 @@ const NATIVE_FIELD_NAMES = [
   'Overflow Pending Disp'
 ];
 
-// Initialize the Power-Up
+// Cache busting version
+const VERSION = '8.6';
+
+// Initialize the Power-Up WITH API KEY
 TrelloPowerUp.initialize({
   'card-detail-badges': function(t, options) {
-    console.log('[Custom Fields] *** V8 LOADING 9 TOTAL FIELDS (7 POWER-UP + 2 NATIVE) ***');
+    console.log('[Custom Fields] *** V8.6 WITH API KEY ***');
+    console.log('[Custom Fields] API Key configured:', API_KEY !== 'YOUR_API_KEY_HERE');
     
     return Promise.all([
       // Get Power-Up storage values (7 fields)
@@ -65,14 +73,14 @@ TrelloPowerUp.initialize({
           callback: function(t) {
             return t.popup({
               title: 'Edit ' + field.name,
-              url: './edit-v5-field.html?fieldId=' + field.id + '&fieldName=' + encodeURIComponent(field.name) + '&fieldType=' + field.type + '&v=8',
+              url: './edit-v5-field.html?fieldId=' + field.id + '&fieldName=' + encodeURIComponent(field.name) + '&fieldType=' + field.type + '&v=' + VERSION,
               height: popupHeight,
               width: popupWidth
             });
           }
         });
         
-        console.log('[Custom Fields] V8 Power-Up badge:', field.name);
+        console.log('[Custom Fields] V8.6 Power-Up badge:', field.name);
       });
       
       // Add Trello native custom field badges (2 overflow fields)
@@ -93,7 +101,7 @@ TrelloPowerUp.initialize({
           
           if (fieldItem && fieldItem.value && fieldItem.value.text) {
             displayValue = fieldItem.value.text;
-            badgeColor = 'purple'; // Different color for native fields
+            badgeColor = 'purple';
           }
           
           badges.push({
@@ -103,17 +111,16 @@ TrelloPowerUp.initialize({
             callback: function(t) {
               return t.popup({
                 title: 'Edit ' + fieldName,
-                url: './edit-native-field.html?fieldId=' + fieldDef.id + '&fieldName=' + encodeURIComponent(fieldName) + '&fieldType=' + fieldDef.type + '&v=8',
-                height: 350,
+                url: './edit-native-field.html?fieldId=' + fieldDef.id + '&fieldName=' + encodeURIComponent(fieldName) + '&fieldType=' + fieldDef.type + '&apiKey=' + API_KEY + '&v=' + VERSION + '&cache=' + Date.now(),
+                height: 400,
                 width: 450
               });
             }
           });
           
-          console.log('[Custom Fields] V8 Native field badge:', fieldName);
+          console.log('[Custom Fields] V8.6 Native field badge:', fieldName);
         } else {
-          console.warn('[Custom Fields] V8 Native field not found on board:', fieldName);
-          // Show a warning badge if field doesn't exist
+          console.warn('[Custom Fields] V8.6 Native field not found on board:', fieldName);
           badges.push({
             title: fieldName,
             text: 'Field not found - create in Trello',
@@ -128,13 +135,13 @@ TrelloPowerUp.initialize({
         }
       });
       
-      console.log('[Custom Fields] *** V8 RETURNING', badges.length, 'TOTAL BADGES (7 POWER-UP + 2 NATIVE) ***');
+      console.log('[Custom Fields] *** V8.6 RETURNING', badges.length, 'TOTAL BADGES ***');
       return badges;
       
     }).catch(function(error) {
-      console.error('[Custom Fields] V8 Error:', error);
+      console.error('[Custom Fields] V8.6 Error:', error);
       return [{
-        title: 'V8 Error',
+        title: 'V8.6 Error',
         text: 'Failed to load: ' + error.message,
         color: 'red'
       }];
@@ -145,10 +152,13 @@ TrelloPowerUp.initialize({
     console.log('[Custom Fields] Opening settings');
     return t.popup({
       title: 'Custom Fields Settings',
-      url: './settings.html',
+      url: './settings.html?v=' + VERSION,
       height: 500
     });
   }
+}, {
+  appKey: API_KEY,
+  appName: APP_NAME
 });
 
-console.log('[Custom Fields] *** VERSION 8 COMPLETE - 9 TOTAL FIELDS ***');
+console.log('[Custom Fields] *** VERSION 8.6 COMPLETE - API KEY:', API_KEY !== 'YOUR_API_KEY_HERE' ? 'CONFIGURED' : 'NOT CONFIGURED' ***');
