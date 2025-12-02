@@ -1,4 +1,4 @@
-/* global TrelloPowerUp */
+/* global TrelloPowerUp */ 
 
 console.log('[Custom Fields] *** VERSION 8 - 7 POWER-UP + 2 NATIVE FIELDS ***');
 
