@@ -1,6 +1,6 @@
 {
   "name": "Custom Fields Power-Up",
-  "details": "Enhanced custom fields management for buffers, buffer approach, buffer definition, zones, and zone definition",
+  "details": "Enhanced custom fields management for buffers, buffer approach, buffer definition, zones, zone definition, active dispensaries, pending dispensaries, and overflow fields",
   "author": "Your Company",
   "capabilities": [
     "card-detail-badges",
@@ -10,5 +10,9 @@
     "iframe": {
       "url": "https://aaronifthen.github.io/2x-verification-custom-fields-powerup/"
     }
-  }
+  },
+  "scopes": [
+    "read",
+    "write"
+  ]
 }
