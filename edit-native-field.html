@@ -58,6 +58,23 @@
             font-weight: 500;
             color: #172b4d;
         }
+        
+        .char-count {
+            text-align: right;
+            font-size: 12px;
+            color: #5e6c84;
+            margin-top: 5px;
+        }
+        
+        .char-count.warning {
+            color: #ff9900;
+            font-weight: bold;
+        }
+        
+        .char-count.error {
+            color: #eb5a46;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -80,11 +97,12 @@
         const fieldType = urlParams.get('fieldType');
         
         const t = TrelloPowerUp.iframe();
+        const MAX_CHARS = 16384; // Trello's text field limit
         
         let fieldDefinition = null;
         
         t.render(function() {
-            console.log('[Native Field] Loading editor for:', fieldName, fieldType);
+            console.log('[Native Field] Loading editor for:', fieldName, fieldType, 'fieldId:', fieldId);
             
             return Promise.all([
                 t.card('customFieldItems'),
@@ -93,11 +111,16 @@
                 const card = results[0];
                 const board = results[1];
                 
+                console.log('[Native Field] Board custom fields:', board.customFields.length);
+                
                 // Find field definition
                 fieldDefinition = board.customFields.find(f => f.id === fieldId);
                 if (!fieldDefinition) {
+                    console.error('[Native Field] Field definition not found for:', fieldId);
                     throw new Error('Field not found: ' + fieldName);
                 }
+                
+                console.log('[Native Field] Found field definition:', fieldDefinition);
                 
                 // Find current value
                 const fieldItem = card.customFieldItems.find(f => f.idCustomField === fieldId);
@@ -105,6 +128,7 @@
                 
                 if (fieldItem && fieldItem.value && fieldItem.value.text) {
                     currentValue = fieldItem.value.text;
+                    console.log('[Native Field] Current value length:', currentValue.length, 'chars');
                 }
                 
                 // Create editor
@@ -112,10 +136,31 @@
                 
                 editorHtml += `
                     <label for="field-input">${fieldName}:</label>
-                    <textarea id="field-input" rows="8" placeholder="Enter ${fieldName.toLowerCase()}...">${currentValue}</textarea>
+                    <textarea id="field-input" rows="8" placeholder="Enter ${fieldName.toLowerCase()}... (supports up to 16K characters)">${currentValue}</textarea>
+                    <div id="char-count" class="char-count">0 / ${MAX_CHARS.toLocaleString()} characters</div>
                 `;
                 
                 document.getElementById('field-editor').innerHTML = editorHtml;
+                
+                // Setup character counter
+                const input = document.getElementById('field-input');
+                const charCount = document.getElementById('char-count');
+                
+                function updateCharCount() {
+                    const length = input.value.length;
+                    charCount.textContent = `${length.toLocaleString()} / ${MAX_CHARS.toLocaleString()} characters`;
+                    
+                    if (length > MAX_CHARS) {
+                        charCount.className = 'char-count error';
+                    } else if (length > MAX_CHARS * 0.9) {
+                        charCount.className = 'char-count warning';
+                    } else {
+                        charCount.className = 'char-count';
+                    }
+                }
+                
+                input.addEventListener('input', updateCharCount);
+                updateCharCount();
                 
                 // Event listeners
                 document.getElementById('save-btn').addEventListener('click', saveField);
@@ -124,7 +169,6 @@
                 
                 // Focus the input
                 setTimeout(function() {
-                    const input = document.getElementById('field-input');
                     if (input) {
                         input.focus();
                         input.setSelectionRange(input.value.length, input.value.length);
@@ -132,7 +176,7 @@
                 }, 100);
                 
             }).catch(function(error) {
-                console.error('[Native Field] Error:', error);
+                console.error('[Native Field] Error loading:', error);
                 document.getElementById('field-editor').innerHTML = `
                     <div class="message error">
                         Error loading field: ${error.message}
@@ -145,35 +189,57 @@
             const input = document.getElementById('field-input');
             const value = input.value.trim();
             
-            console.log('[Native Field] Saving:', fieldName, '=', value);
+            if (value.length > MAX_CHARS) {
+                alert(`Content is too long! Maximum ${MAX_CHARS.toLocaleString()} characters allowed. Current: ${value.length.toLocaleString()}`);
+                return;
+            }
             
-            // Save to Trello's native custom field
-            const fieldValue = { text: value };
+            console.log('[Native Field] Saving to NATIVE FIELD ONLY (no Power-Up storage)');
+            console.log('[Native Field] Field:', fieldName, 'Length:', value.length, 'chars');
+            console.log('[Native Field] Field ID:', fieldId);
             
-            t.card('customFieldItems', fieldValue, fieldId).then(function() {
-                console.log('[Native Field] Saved successfully');
-                t.closePopup();
-            }).catch(function(error) {
-                console.error('[Native Field] Error saving:', error);
-                alert('Error saving: ' + error.message);
-            });
+            // Save directly to Trello native custom field (supports 16K chars)
+            const fieldValue = {
+                text: value
+            };
+            
+            console.log('[Native Field] Calling t.card("customFieldItems", value, fieldId)');
+            
+            t.card('customFieldItems', fieldValue, fieldId)
+                .then(function(result) {
+                    console.log('[Native Field] Save successful!', result);
+                    t.closePopup();
+                })
+                .catch(function(error) {
+                    console.error('[Native Field] Save failed:', error);
+                    console.error('[Native Field] Error type:', error.name);
+                    console.error('[Native Field] Error message:', error.message);
+                    console.error('[Native Field] Full error:', JSON.stringify(error, null, 2));
+                    
+                    // Show user-friendly error
+                    alert('Error saving field: ' + error.message + '\n\nPlease try editing directly in Trello\'s Custom Fields section below the card.');
+                });
         }
         
         function clearField() {
             if (confirm('Are you sure you want to clear this field?')) {
-                console.log('[Native Field] Clearing field:', fieldName);
+                console.log('[Native Field] Clearing native field:', fieldName);
                 
-                t.card('customFieldItems', {}, fieldId).then(function() {
-                    console.log('[Native Field] Field cleared successfully');
-                    t.closePopup();
-                }).catch(function(error) {
-                    console.error('[Native Field] Error clearing:', error);
-                    alert('Error clearing field: ' + error.message);
-                });
+                // Clear by setting empty text
+                t.card('customFieldItems', { text: '' }, fieldId)
+                    .then(function() {
+                        console.log('[Native Field] Field cleared successfully');
+                        t.closePopup();
+                    })
+                    .catch(function(error) {
+                        console.error('[Native Field] Error clearing:', error);
+                        alert('Error clearing field: ' + error.message);
+                    });
             }
         }
         
         function cancelEdit() {
+            console.log('[Native Field] Edit cancelled');
             t.closePopup();
         }
     </script>
