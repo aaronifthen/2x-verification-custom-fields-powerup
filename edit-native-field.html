@@ -100,17 +100,21 @@
         const MAX_CHARS = 16384; // Trello's text field limit
         
         let fieldDefinition = null;
+        let cardId = null;
         
         t.render(function() {
             console.log('[Native Field] Loading editor for:', fieldName, fieldType, 'fieldId:', fieldId);
             
             return Promise.all([
+                t.card('id'),
                 t.card('customFieldItems'),
                 t.board('customFields')
             ]).then(function(results) {
-                const card = results[0];
-                const board = results[1];
+                cardId = results[0].id;
+                const card = results[1];
+                const board = results[2];
                 
+                console.log('[Native Field] Card ID:', cardId);
                 console.log('[Native Field] Board custom fields:', board.customFields.length);
                 
                 // Find field definition
@@ -187,37 +191,78 @@
         
         function saveField() {
             const input = document.getElementById('field-input');
-            const value = input.value.trim();
+            const value = input.value;  // Don't trim - preserve all whitespace
             
             if (value.length > MAX_CHARS) {
                 alert(`Content is too long! Maximum ${MAX_CHARS.toLocaleString()} characters allowed. Current: ${value.length.toLocaleString()}`);
                 return;
             }
             
-            console.log('[Native Field] Saving to NATIVE FIELD ONLY (no Power-Up storage)');
-            console.log('[Native Field] Field:', fieldName, 'Length:', value.length, 'chars');
+            console.log('[Native Field] === SAVE ATTEMPT START ===');
+            console.log('[Native Field] Field Name:', fieldName);
             console.log('[Native Field] Field ID:', fieldId);
+            console.log('[Native Field] Card ID:', cardId);
+            console.log('[Native Field] Value Length:', value.length, 'chars');
+            console.log('[Native Field] First 100 chars:', value.substring(0, 100));
             
-            // Save directly to Trello native custom field (supports 16K chars)
-            const fieldValue = {
-                text: value
-            };
+            // Disable save button during save
+            const saveBtn = document.getElementById('save-btn');
+            const originalText = saveBtn.textContent;
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Saving...';
             
-            console.log('[Native Field] Calling t.card("customFieldItems", value, fieldId)');
+            // Try using setCustomFieldItem method
+            console.log('[Native Field] Attempting save with setCustomFieldItem...');
             
-            t.card('customFieldItems', fieldValue, fieldId)
+            t.setCustomFieldItem(cardId, fieldId, value)
                 .then(function(result) {
-                    console.log('[Native Field] Save successful!', result);
+                    console.log('[Native Field] ✓ Save successful via setCustomFieldItem!', result);
                     t.closePopup();
                 })
                 .catch(function(error) {
-                    console.error('[Native Field] Save failed:', error);
-                    console.error('[Native Field] Error type:', error.name);
-                    console.error('[Native Field] Error message:', error.message);
-                    console.error('[Native Field] Full error:', JSON.stringify(error, null, 2));
+                    console.error('[Native Field] ✗ setCustomFieldItem failed:', error);
+                    console.log('[Native Field] Trying alternative method: set() ...');
                     
-                    // Show user-friendly error
-                    alert('Error saving field: ' + error.message + '\n\nPlease try editing directly in Trello\'s Custom Fields section below the card.');
+                    // Try alternative: use set method
+                    return t.set(cardId, 'customField', fieldId, { text: value })
+                        .then(function(result) {
+                            console.log('[Native Field] ✓ Save successful via set()!', result);
+                            t.closePopup();
+                        })
+                        .catch(function(error2) {
+                            console.error('[Native Field] ✗ set() also failed:', error2);
+                            console.log('[Native Field] Trying REST API method...');
+                            
+                            // Try direct REST API
+                            return t.getRestApi()
+                                .then(function(api) {
+                                    console.log('[Native Field] Got REST API instance');
+                                    
+                                    return api.rest.put('/cards/' + cardId + '/customField/' + fieldId + '/item', {
+                                        value: {
+                                            text: value
+                                        }
+                                    });
+                                })
+                                .then(function(result) {
+                                    console.log('[Native Field] ✓ Save successful via REST API!', result);
+                                    t.closePopup();
+                                })
+                                .catch(function(error3) {
+                                    console.error('[Native Field] ✗ REST API also failed:', error3);
+                                    
+                                    // Re-enable button
+                                    saveBtn.disabled = false;
+                                    saveBtn.textContent = originalText;
+                                    
+                                    // Show detailed error
+                                    const errorMsg = error3.message || error2.message || error.message || 'Unknown error';
+                                    console.error('[Native Field] === ALL SAVE METHODS FAILED ===');
+                                    console.error('[Native Field] Final error:', errorMsg);
+                                    
+                                    alert('Error saving field: ' + errorMsg + '\n\nThe field can be edited directly in Trello\'s Custom Fields section below the card.\n\nPlease check the browser console (F12) for detailed error information.');
+                                });
+                        });
                 });
         }
         
@@ -225,14 +270,22 @@
             if (confirm('Are you sure you want to clear this field?')) {
                 console.log('[Native Field] Clearing native field:', fieldName);
                 
-                // Clear by setting empty text
-                t.card('customFieldItems', { text: '' }, fieldId)
+                const saveBtn = document.getElementById('clear-btn');
+                saveBtn.disabled = true;
+                saveBtn.textContent = 'Clearing...';
+                
+                // Try using setCustomFieldItem with empty string
+                t.setCustomFieldItem(cardId, fieldId, '')
                     .then(function() {
                         console.log('[Native Field] Field cleared successfully');
                         t.closePopup();
                     })
                     .catch(function(error) {
                         console.error('[Native Field] Error clearing:', error);
+                        
+                        saveBtn.disabled = false;
+                        saveBtn.textContent = 'Clear';
+                        
                         alert('Error clearing field: ' + error.message);
                     });
             }
