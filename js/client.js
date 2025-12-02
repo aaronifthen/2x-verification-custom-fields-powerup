@@ -1,9 +1,9 @@
-/* global TrelloPowerUp */ 
+/* global TrelloPowerUp */
 
 // IMPORTANT: Replace with your actual Trello API key from https://trello.com/power-ups/admin
 const API_KEY = '301da7855ed6ae5810670bb9ea548f8e';
 const APP_NAME = 'power-up-2x-verification-custom-fields';
-var VERSION = '8.7';
+var VERSION = '8.8';
 
 // Power-Up storage fields (7 fields)
 var POWERUP_FIELDS = [
@@ -28,25 +28,41 @@ var NATIVE_FIELD_NAMES = [
   'Overflow Pending Disp'
 ];
 
-console.log('[Custom Fields] VERSION 8.7 STARTING');
+console.log('[Custom Fields] VERSION 8.8 STARTING');
 
 TrelloPowerUp.initialize({
   'card-detail-badges': function(t, options) {
-    console.log('[Custom Fields] Loading badges V8.7');
+    console.log('[Custom Fields] Loading badges V8.8');
     
     return Promise.all([
       Promise.all(POWERUP_FIELDS.map(function(field) {
         return t.get('card', 'shared', field.id, '').then(function(value) {
           return { field: field, value: value };
+        }).catch(function(err) {
+          console.error('[Custom Fields] Error getting field:', field.id, err);
+          return { field: field, value: '' };
         });
       })),
-      t.card('customFieldItems'),
-      t.board('customFields')
+      t.card('customFieldItems').catch(function(err) {
+        console.error('[Custom Fields] Error getting customFieldItems:', err);
+        return { customFieldItems: [] };
+      }),
+      t.board('customFields').catch(function(err) {
+        console.error('[Custom Fields] Error getting board customFields:', err);
+        return { customFields: [] };
+      })
     ]).then(function(results) {
       var powerUpData = results[0];
-      var cardCustomFields = results[1];
-      var boardCustomFields = results[2];
+      var cardData = results[1];
+      var boardData = results[2];
+      
+      var cardCustomFields = cardData.customFieldItems || [];
+      var boardCustomFields = boardData.customFields || [];
+      
       var badges = [];
+      
+      console.log('[Custom Fields] PowerUp fields:', powerUpData.length);
+      console.log('[Custom Fields] Board custom fields:', boardCustomFields.length);
       
       // Add Power-Up storage field badges
       powerUpData.forEach(function(data) {
@@ -74,48 +90,71 @@ TrelloPowerUp.initialize({
       
       // Add native custom field badges
       NATIVE_FIELD_NAMES.forEach(function(fieldName) {
-        var fieldDef = boardCustomFields.customFields.find(function(f) {
-          return f.name === fieldName;
-        });
-        
-        if (fieldDef) {
-          var fieldItem = cardCustomFields.customFieldItems.find(function(item) {
-            return item.idCustomField === fieldDef.id;
-          });
+        try {
+          var fieldDef = null;
           
-          var displayValue = '(click to add)';
-          var badgeColor = 'light-gray';
-          
-          if (fieldItem && fieldItem.value && fieldItem.value.text) {
-            displayValue = fieldItem.value.text;
-            badgeColor = 'purple';
+          // Safely find field definition
+          if (boardCustomFields && boardCustomFields.length > 0) {
+            for (var i = 0; i < boardCustomFields.length; i++) {
+              if (boardCustomFields[i].name === fieldName) {
+                fieldDef = boardCustomFields[i];
+                break;
+              }
+            }
           }
           
-          badges.push({
-            title: fieldName,
-            text: displayValue,
-            color: badgeColor,
-            callback: function(t) {
-              return t.popup({
-                title: 'Edit ' + fieldName,
-                url: './edit-native-field.html?fieldId=' + fieldDef.id + '&fieldName=' + encodeURIComponent(fieldName) + '&fieldType=' + fieldDef.type + '&apiKey=' + API_KEY + '&v=' + VERSION + '&cache=' + Date.now(),
-                height: 400,
-                width: 450
-              });
+          if (fieldDef) {
+            var fieldItem = null;
+            
+            // Safely find field value
+            if (cardCustomFields && cardCustomFields.length > 0) {
+              for (var j = 0; j < cardCustomFields.length; j++) {
+                if (cardCustomFields[j].idCustomField === fieldDef.id) {
+                  fieldItem = cardCustomFields[j];
+                  break;
+                }
+              }
             }
-          });
-        } else {
-          badges.push({
-            title: fieldName,
-            text: 'Field not found',
-            color: 'red',
-            callback: function(t) {
-              return t.alert({
-                message: 'Create a text field named "' + fieldName + '" in Trello Custom Fields',
-                duration: 8
-              });
+            
+            var displayValue = '(click to add)';
+            var badgeColor = 'light-gray';
+            
+            if (fieldItem && fieldItem.value && fieldItem.value.text) {
+              displayValue = fieldItem.value.text;
+              badgeColor = 'purple';
             }
-          });
+            
+            badges.push({
+              title: fieldName,
+              text: displayValue,
+              color: badgeColor,
+              callback: function(t) {
+                return t.popup({
+                  title: 'Edit ' + fieldName,
+                  url: './edit-native-field.html?fieldId=' + fieldDef.id + '&fieldName=' + encodeURIComponent(fieldName) + '&fieldType=' + fieldDef.type + '&apiKey=' + API_KEY + '&v=' + VERSION + '&cache=' + Date.now(),
+                  height: 400,
+                  width: 450
+                });
+              }
+            });
+            
+            console.log('[Custom Fields] Added native field badge:', fieldName);
+          } else {
+            console.warn('[Custom Fields] Native field not found:', fieldName);
+            badges.push({
+              title: fieldName,
+              text: 'Field not found',
+              color: 'red',
+              callback: function(t) {
+                return t.alert({
+                  message: 'Create a text field named "' + fieldName + '" in Trello Custom Fields',
+                  duration: 8
+                });
+              }
+            });
+          }
+        } catch (err) {
+          console.error('[Custom Fields] Error processing native field:', fieldName, err);
         }
       });
       
@@ -123,10 +162,11 @@ TrelloPowerUp.initialize({
       return badges;
       
     }).catch(function(error) {
-      console.error('[Custom Fields] Error:', error);
+      console.error('[Custom Fields] Fatal error in card-detail-badges:', error);
+      console.error('[Custom Fields] Error stack:', error.stack);
       return [{
         title: 'Error',
-        text: error.message,
+        text: 'Failed to load',
         color: 'red'
       }];
     });
@@ -144,4 +184,4 @@ TrelloPowerUp.initialize({
   appName: APP_NAME
 });
 
-console.log('[Custom Fields] VERSION 8.7 INITIALIZED');
+console.log('[Custom Fields] VERSION 8.8 INITIALIZED');
