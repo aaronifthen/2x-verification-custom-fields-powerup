@@ -108,14 +108,13 @@
         var fieldId = urlParams.get('fieldId');
         var fieldName = urlParams.get('fieldName');
         var fieldType = urlParams.get('fieldType');
-        var apiKey = urlParams.get('apiKey');
         
         var t = TrelloPowerUp.iframe();
         var MAX_CHARS = 16384;
         
         var fieldDefinition = null;
         var cardId = null;
-        var token = null;
+        var jwt = null;
         
         function debugLog(msg) {
             console.log(msg);
@@ -130,21 +129,20 @@
             debugLog('[Native Field] INITIALIZATION START');
             debugLog('[Native Field] Field: ' + fieldName);
             debugLog('[Native Field] Field ID: ' + fieldId);
-            debugLog('[Native Field] API Key present: ' + (apiKey ? 'Yes' : 'No'));
             
             return Promise.all([
                 t.card('id'),
                 t.card('customFieldItems'),
                 t.board('customFields'),
-                t.getContext()
+                t.jwt()
             ]).then(function(results) {
                 cardId = results[0].id;
                 var card = results[1];
                 var board = results[2];
-                var context = results[3];
+                jwt = results[3];
                 
                 debugLog('[Native Field] Card ID: ' + cardId);
-                debugLog('[Native Field] Member: ' + context.member);
+                debugLog('[Native Field] JWT available: ' + (jwt ? 'YES' : 'NO'));
                 
                 fieldDefinition = board.customFields.find(function(f) {
                     return f.id === fieldId;
@@ -221,8 +219,8 @@
                 return;
             }
             
-            if (!apiKey) {
-                alert('API Key not configured! Please update client.js with your Trello API key.');
+            if (!jwt) {
+                alert('JWT not available. This Power-Up cannot save to native fields directly.\n\nPlease use Trello\'s Custom Fields interface below to edit this field.');
                 return;
             }
             
@@ -234,61 +232,33 @@
             saveBtn.disabled = true;
             saveBtn.textContent = 'Saving...';
             
-            debugLog('[Native Field] Authorizing with Trello...');
-            debugLog('[Native Field] API Key being used: ' + (apiKey ? apiKey.substring(0, 8) + '...' : 'NONE'));
+            debugLog('[Native Field] Using JWT authentication');
             
-            // Use token authorization instead of getRestApi
-            var authOptions = {
-                name: 'Custom Fields Power-Up',
-                scope: {
-                    read: true,
-                    write: true
-                },
-                expiration: 'never'
+            var url = 'https://api.trello.com/1/cards/' + cardId + '/customField/' + fieldId + '/item';
+            debugLog('[Native Field] URL: ' + url);
+            
+            var payload = {
+                value: {
+                    text: value
+                }
             };
             
-            debugLog('[Native Field] Calling t.authorize()...');
+            debugLog('[Native Field] Making PUT request with JWT...');
             
-            // Add timeout detection
-            var authTimeout = setTimeout(function() {
-                debugLog('[Native Field] WARNING: t.authorize() taking longer than 5 seconds');
-                debugLog('[Native Field] This usually means authorization popup is blocked or not appearing');
-            }, 5000);
-            
-            t.authorize(authOptions).then(function(authToken) {
-                clearTimeout(authTimeout);
-                debugLog('[Native Field] Authorization returned');
-                debugLog('[Native Field] Token received: ' + (authToken ? 'YES' : 'NO'));
-                debugLog('[Native Field] Got authorization token');
-                token = authToken;
-                
-                var url = 'https://api.trello.com/1/cards/' + cardId + '/customField/' + fieldId + '/item';
-                debugLog('[Native Field] URL: ' + url);
-                
-                var params = {
-                    key: apiKey,
-                    token: token,
-                    value: JSON.stringify({ text: value })
-                };
-                
-                var queryString = Object.keys(params).map(function(key) {
-                    return encodeURIComponent(key) + '=' + encodeURIComponent(params[key]);
-                }).join('&');
-                
-                debugLog('[Native Field] Making PUT request...');
-                
-                return fetch(url + '?' + queryString, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                });
+            fetch(url, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + jwt
+                },
+                body: JSON.stringify(payload)
             }).then(function(response) {
                 debugLog('[Native Field] Response status: ' + response.status);
                 
                 if (!response.ok) {
                     return response.text().then(function(text) {
-                        throw new Error('API error: ' + response.status + ' - ' + text);
+                        debugLog('[Native Field] Error response body: ' + text);
+                        throw new Error('API error ' + response.status + ': ' + text);
                     });
                 }
                 
@@ -302,19 +272,16 @@
                 }, 500);
             }).catch(function(error) {
                 debugLog('[Native Field] SAVE FAILED');
-                debugLog('[Native Field] Error type: ' + error.name);
-                debugLog('[Native Field] Error message: ' + error.message);
-                debugLog('[Native Field] Error stack: ' + (error.stack || 'no stack'));
+                debugLog('[Native Field] Error: ' + error.message);
                 
                 saveBtn.disabled = false;
                 saveBtn.textContent = originalText;
                 
                 var errorMsg = 'Error saving field: ' + error.message;
                 
-                if (error.message && error.message.indexOf('authorize') > -1) {
-                    errorMsg += '\n\nAuthorization failed. Make sure:';
-                    errorMsg += '\n1. You have a valid API key in client.js';
-                    errorMsg += '\n2. Pop-ups are not blocked in your browser';
+                if (error.message.indexOf('401') > -1 || error.message.indexOf('403') > -1) {
+                    errorMsg += '\n\nAuthentication failed. The Power-Up does not have permission to modify custom fields.';
+                    errorMsg += '\n\nPlease use Trello\'s Custom Fields interface below to edit this field.';
                 }
                 
                 alert(errorMsg + '\n\nSee debug info below for details.');
@@ -329,23 +296,15 @@
                 clearBtn.disabled = true;
                 clearBtn.textContent = 'Clearing...';
                 
-                t.authorize({
-                    name: 'Custom Fields Power-Up',
-                    scope: { read: true, write: true },
-                    expiration: 'never'
-                }).then(function(authToken) {
-                    var url = 'https://api.trello.com/1/cards/' + cardId + '/customField/' + fieldId + '/item';
-                    var params = {
-                        key: apiKey,
-                        token: authToken,
-                        value: JSON.stringify({ text: '' })
-                    };
-                    
-                    var queryString = Object.keys(params).map(function(key) {
-                        return encodeURIComponent(key) + '=' + encodeURIComponent(params[key]);
-                    }).join('&');
-                    
-                    return fetch(url + '?' + queryString, { method: 'PUT' });
+                var url = 'https://api.trello.com/1/cards/' + cardId + '/customField/' + fieldId + '/item';
+                
+                fetch(url, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + jwt
+                    },
+                    body: JSON.stringify({ value: { text: '' } })
                 }).then(function(response) {
                     if (!response.ok) {
                         throw new Error('Clear failed: ' + response.status);
