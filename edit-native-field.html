@@ -235,16 +235,30 @@
             saveBtn.textContent = 'Saving...';
             
             debugLog('[Native Field] Authorizing with Trello...');
+            debugLog('[Native Field] API Key being used: ' + (apiKey ? apiKey.substring(0, 8) + '...' : 'NONE'));
             
             // Use token authorization instead of getRestApi
-            t.authorize({
+            var authOptions = {
                 name: 'Custom Fields Power-Up',
                 scope: {
                     read: true,
                     write: true
                 },
                 expiration: 'never'
-            }).then(function(authToken) {
+            };
+            
+            debugLog('[Native Field] Calling t.authorize()...');
+            
+            // Add timeout detection
+            var authTimeout = setTimeout(function() {
+                debugLog('[Native Field] WARNING: t.authorize() taking longer than 5 seconds');
+                debugLog('[Native Field] This usually means authorization popup is blocked or not appearing');
+            }, 5000);
+            
+            t.authorize(authOptions).then(function(authToken) {
+                clearTimeout(authTimeout);
+                debugLog('[Native Field] Authorization returned');
+                debugLog('[Native Field] Token received: ' + (authToken ? 'YES' : 'NO'));
                 debugLog('[Native Field] Got authorization token');
                 token = authToken;
                 
@@ -288,12 +302,22 @@
                 }, 500);
             }).catch(function(error) {
                 debugLog('[Native Field] SAVE FAILED');
-                debugLog('[Native Field] Error: ' + error.message);
+                debugLog('[Native Field] Error type: ' + error.name);
+                debugLog('[Native Field] Error message: ' + error.message);
+                debugLog('[Native Field] Error stack: ' + (error.stack || 'no stack'));
                 
                 saveBtn.disabled = false;
                 saveBtn.textContent = originalText;
                 
-                alert('Error saving field: ' + error.message + '\n\nSee debug info below for details.');
+                var errorMsg = 'Error saving field: ' + error.message;
+                
+                if (error.message && error.message.indexOf('authorize') > -1) {
+                    errorMsg += '\n\nAuthorization failed. Make sure:';
+                    errorMsg += '\n1. You have a valid API key in client.js';
+                    errorMsg += '\n2. Pop-ups are not blocked in your browser';
+                }
+                
+                alert(errorMsg + '\n\nSee debug info below for details.');
             });
         }
         
