@@ -1,5 +1,5 @@
 /* global TrelloPowerUp */
-
+ 
 var VERSION = '9.1';
 
 // Power-Up storage fields (7 fields - up to 4K chars each)
